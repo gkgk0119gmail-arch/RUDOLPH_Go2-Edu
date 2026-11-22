@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  Go2 (eth0) + local sensors.
+  AllowMulticast=spdp: multicast only for discovery, data goes unicast,
+  so big local streams (camera/lidar between nodes on this NX) stay on the
+  host instead of being multicast onto the Go2 LAN.
+-->
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain Id="any">
+    <General>
+      <Interfaces>
+        <NetworkInterface name="eth0" priority="default" multicast="default" />
+      </Interfaces>
+      <AllowMulticast>spdp</AllowMulticast>
+      <MaxMessageSize>65500B</MaxMessageSize>
+    </General>
+    <Internal>
+      <SocketReceiveBufferSize min="16MB"/>
+      <Watermarks>
+        <WhcHigh>500kB</WhcHigh>
+      </Watermarks>
+    </Internal>
+  </Domain>
+</CycloneDDS>

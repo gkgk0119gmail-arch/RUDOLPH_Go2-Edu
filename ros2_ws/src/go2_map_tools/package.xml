@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>go2_map_tools</name>
+  <version>0.1.0</version>
+  <description>Voxel map accumulator / PCD saver for FAST-LIO on Go2</description>
+  <maintainer email="unitree@example.com">unitree</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>pcl_conversions</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

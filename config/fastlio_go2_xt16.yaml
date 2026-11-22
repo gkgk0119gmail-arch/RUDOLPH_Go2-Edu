@@ -1,0 +1,51 @@
+# FAST-LIO2 — Unitree Go2 + Hesai PandarXT-16 (top mount) + Go2 body IMU
+/**:
+    ros__parameters:
+        feature_extract_enable: false
+        point_filter_num: 2            # XT16 ~60k pts/frame @10Hz -> keep every 2nd
+        max_iteration: 3
+        filter_size_surf: 0.25         # indoor: finer than outdoor default 0.5
+        filter_size_map: 0.25
+        cube_side_length: 1000.0
+        runtime_pos_log_enable: false
+        map_file_path: "/home/unitree/Desktop/3DOG/maps/fastlio_map.pcd"
+
+        common:
+            lid_topic:  "/lidar_points"
+            imu_topic:  "/go2/imu"      # go2_imu_bridge (from /lowstate, ~500Hz)
+            time_sync_en: false
+            time_offset_lidar_to_imu: 0.0   # both stamped with NX clock (Hesai use_timestamp_type: 1)
+
+        preprocess:
+            lidar_type: 5               # HESAI (custom handler added in preprocess.cpp)
+            scan_line: 16
+            scan_rate: 10
+            timestamp_unit: 0           # unused by HESAI handler (absolute double seconds)
+            blind: 0.5                  # drop robot body / handle bar around the lidar
+
+        mapping:
+            acc_cov: 0.1
+            gyr_cov: 0.1
+            b_acc_cov: 0.0001
+            b_gyr_cov: 0.0001
+            fov_degree:    360.0
+            det_range:     100.0
+            extrinsic_est_en:  false
+            # LiDAR pose in IMU frame (go2_imu).
+            #   base_link->hesai_lidar (0.1454, 0, 0.1331, yaw +90deg)
+            #   base_link->go2_imu    (-0.02557, 0, 0.04232)   [Go2 URDF imu_joint]
+            #   => T = (0.17097, 0, 0.09078), R = Rz(+90deg)
+            extrinsic_T: [ 0.17097, 0.0, 0.09078 ]
+            extrinsic_R: [ 0., -1., 0.,
+                           1.,  0., 0.,
+                           0.,  0., 1. ]
+
+        publish:
+            path_en:  true
+            scan_publish_en:  true
+            dense_publish_en: true
+            scan_bodyframe_pub_en: true
+
+        pcd_save:
+            pcd_save_en: false          # FAST-LIO ROS2 saver is broken -> map_accumulator saves maps
+            interval: -1                # all frames into one pcd (saved via /map_save or on exit)

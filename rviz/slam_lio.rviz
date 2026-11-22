@@ -1,0 +1,91 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Help Height: 0
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 25; 25; 30
+    Fixed Frame: camera_init
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 1
+      Plane Cell Count: 40
+      Color: 80; 80; 90
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Map (/map_cloud, 10cm voxel)
+      Enabled: true
+      Topic:
+        Value: /map_cloud
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        Depth: 1
+      Style: Points
+      Size (Pixels): 2
+      Alpha: 0.8
+      Color Transformer: AxisColor
+      Axis: Z
+      Autocompute Value Bounds: false
+      Min Value: -0.6
+      Max Value: 2.5
+      Decay Time: 0
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Current scan (body)
+      Enabled: true
+      Topic:
+        Value: /cloud_registered_body
+        Reliability Policy: Reliable
+        Depth: 5
+      Style: Points
+      Size (Pixels): 3
+      Color Transformer: FlatColor
+      Color: 255; 255; 255
+      Decay Time: 0
+    - Class: rviz_default_plugins/Path
+      Name: Trajectory
+      Enabled: true
+      Topic:
+        Value: /path
+        Reliability Policy: Reliable
+        Depth: 5
+      Color: 255; 60; 60
+      Line Style: Billboards
+      Line Width: 0.04
+    - Class: rviz_default_plugins/Odometry
+      Name: Odometry
+      Enabled: true
+      Topic:
+        Value: /Odometry
+        Reliability Policy: Reliable
+        Depth: 5
+      Keep: 1
+      Shape:
+        Value: Axes
+        Axes Length: 0.5
+        Axes Radius: 0.05
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Show Names: false
+      Marker Scale: 0.4
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Measure
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 18
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 0.9
+      Yaw: 3.6
+      Target Frame: body
+Window Geometry:
+  Width: 1600
+  Height: 950
