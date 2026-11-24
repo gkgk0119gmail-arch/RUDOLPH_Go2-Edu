@@ -14,6 +14,7 @@ from pathlib import Path
 import torch
 
 import isaaclab.envs.mdp as mdp
+from isaaclab.envs.mdp.actions.joint_actions import JointPositionAction
 from isaaclab.managers import CommandTerm, CommandTermCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -179,6 +180,59 @@ class Go2CrouchRobustEnvCfg(Go2CrouchWalkEnvCfg):
             "damping_distribution_params": (0.8, 1.2), "operation": "scale"})
         self.commands.base_height.range, self.commands.base_height.start_low = (0.12, 0.32), 0.16
         self.rewards.thigh_contact.params["sensor_cfg"].body_names = [".*_thigh", ".*_calf"]
+
+
+class DelayedJointPositionAction(JointPositionAction):
+    """Joint position targets that reach the motors 0..max physics steps late (one delay per robot and episode)."""
+
+    cfg: DelayedJointPositionActionCfg
+
+    def __init__(self, cfg: DelayedJointPositionActionCfg, env):
+        super().__init__(cfg, env)
+        n = cfg.delay_steps[1] + 1
+        self._buf = self._offset.unsqueeze(0).repeat(n, 1, 1)  # ring: newest at _i
+        self._i = 0
+        self._delay = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
+        self._rows = torch.arange(self.num_envs, device=self.device)
+        self.reset()
+
+    def reset(self, env_ids: Sequence[int] | None = None, **kw):
+        super().reset(env_ids, **kw) if env_ids is not None else super().reset()
+        if not hasattr(self, "_rows"):
+            return
+        ids = self._rows if env_ids is None else self._rows[env_ids]
+        self._delay[ids] = torch.randint(self.cfg.delay_steps[0], self.cfg.delay_steps[1] + 1, (len(ids),), device=self.device)
+        self._buf[:, ids] = self._offset[ids]
+
+    def apply_actions(self):
+        self._i = (self._i + 1) % len(self._buf)
+        self._buf[self._i] = self.processed_actions
+        target = self._buf[(self._i - self._delay) % len(self._buf), self._rows]
+        self._asset.set_joint_position_target_index(target=target, joint_ids=self._joint_ids)
+
+
+@configclass
+class DelayedJointPositionActionCfg(mdp.JointPositionActionCfg):
+    class_type: type = DelayedJointPositionAction
+    delay_steps: tuple[int, int] = (0, 8)
+    """Delay range in physics steps (5 ms each)."""
+
+
+def delayed_action(cfg, lo: int, hi: int):
+    a = cfg.actions.joint_pos
+    cfg.actions.joint_pos = DelayedJointPositionActionCfg(asset_name=a.asset_name, joint_names=a.joint_names,
+        scale=a.scale, use_default_offset=True, delay_steps=(lo, hi))
+
+
+@configclass
+class Go2CrouchDelayEnvCfg(Go2CrouchRobustEnvCfg):
+    """Stage 3: stage 2 + 0-40 ms control delay; head contact ends the episode; height limit back to 0.14 m."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        delayed_action(self, 0, 8)
+        self.terminations.base_contact.params["sensor_cfg"].body_names = ["base", "Head_.*"]
+        self.commands.base_height.range, self.commands.base_height.start_low = (0.14, 0.32), 0.14
 
 
 @configclass

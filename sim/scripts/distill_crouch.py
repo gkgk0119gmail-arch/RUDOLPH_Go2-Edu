@@ -19,6 +19,7 @@ from isaaclab_tasks.utils.hydra import resolve_task_config  # noqa: E402
 ap = argparse.ArgumentParser()
 ap.add_argument("--teacher", required=True)
 ap.add_argument("--out", required=True)
+ap.add_argument("--task", default="Go2-Crouch-Robust")
 ap.add_argument("--envs", type=int, default=4096)
 ap.add_argument("--iters", type=int, default=1500)
 ap.add_argument("--steps", type=int, default=24)
@@ -27,7 +28,7 @@ ap.add_argument("--seed", type=int, default=1)
 add_launcher_args(ap)
 args = ap.parse_args()
 sys.argv = sys.argv[:1]
-cfg, _ = resolve_task_config("Go2-Crouch-Robust", "rsl_rl_cfg_entry_point")
+cfg, _ = resolve_task_config(args.task, "rsl_rl_cfg_entry_point")
 cfg.scene.num_envs, cfg.seed = args.envs, args.seed
 cfg.commands.base_height.curriculum = False
 

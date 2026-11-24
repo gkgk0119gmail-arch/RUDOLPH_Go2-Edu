@@ -23,6 +23,8 @@ ap.add_argument("--per", type=int, default=24, help="robots per (speed, height) 
 ap.add_argument("--seconds", type=float, default=10.0)
 ap.add_argument("--no_payload", action="store_true")
 ap.add_argument("--stress", action="store_true", help="training terrain mix (hardest level), friction 0.4-1.2, base mass / CoM noise, pushes, sensor noise")
+ap.add_argument("--delay_ms", type=int, default=0, help="fixed control delay (multiple of 5 ms)")
+ap.add_argument("--head", action="store_true", help="head contact also counts as a fall")
 add_launcher_args(ap)
 args = ap.parse_args()
 sys.argv = sys.argv[:1]
@@ -44,6 +46,12 @@ else:
     cfg.events.push_robot = cfg.events.add_base_mass = cfg.events.base_com = None
 if args.no_payload:
     cfg.events.payload = None
+from go2_lab.crouch import delayed_action  # noqa: E402
+
+if args.delay_ms:
+    delayed_action(cfg, args.delay_ms // 5, args.delay_ms // 5)
+if args.head:
+    cfg.terminations.base_contact.params["sensor_cfg"].body_names = ["base", "Head_.*"]
 cfg.episode_length_s = args.seconds + 5
 cfg.seed = 7
 
@@ -131,6 +139,6 @@ with launch_simulation(cfg, args):
                              base_max=round(float(hmax[ok].mean()), 3) if ok.any() else None))
             print(rows[-1], flush=True)
     if args.out:
-        Path(args.out).write_text(json.dumps(dict(ckpt=args.ckpt, payload=not args.no_payload, stress=args.stress, base_mass=float(mass[0]),
+        Path(args.out).write_text(json.dumps(dict(ckpt=args.ckpt, payload=not args.no_payload, stress=args.stress, delay_ms=args.delay_ms, head=args.head, base_mass=float(mass[0]),
                                                   rows=rows), indent=1))
     env.close()
