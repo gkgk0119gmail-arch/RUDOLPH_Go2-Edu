@@ -235,6 +235,33 @@ class Go2CrouchDelayEnvCfg(Go2CrouchRobustEnvCfg):
         self.commands.base_height.range, self.commands.base_height.start_low = (0.14, 0.32), 0.14
 
 
+def swing_height(env, asset_cfg: SceneEntityCfg, target: float) -> torch.Tensor:
+    """Squared error of the moving feet's height above the local ground, weighted by their horizontal speed."""
+    r = env.scene[asset_cfg.name].data
+    z = r.body_pos_w.torch[:, asset_cfg.body_ids, 2]
+    ground = r.root_pos_w.torch[:, 2] - body_height(env)
+    v = r.body_lin_vel_w.torch[:, asset_cfg.body_ids, :2].norm(dim=-1)
+    return ((z - ground[:, None] - target).clamp(max=0.0).square() * torch.tanh(2.0 * v)).sum(1)
+
+
+@configclass
+class Go2CrouchStepEnvCfg(Go2CrouchDelayEnvCfg):
+    """Stage 4: stage 3 + lifted swing feet, terrain of random difficulty (the distance curriculum never left its
+    lowest level at these speeds) and more / higher sills."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.curriculum.terrain_levels = None
+        self.scene.terrain.max_init_terrain_level = None
+        g = self.scene.terrain.terrain_generator
+        g.curriculum, g.difficulty_range = False, (0.0, 1.0)
+        g.sub_terrains["flat"].proportion, g.sub_terrains["random_rough"].proportion = 0.3, 0.3
+        g.sub_terrains["sills"].proportion = 0.4
+        g.sub_terrains["sills"].grid_height_range = (0.01, 0.05)
+        self.rewards.swing_height = RewTerm(func=swing_height, weight=-60.0, params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"), "target": 0.022 + 0.06})
+
+
 @configclass
 class Go2CrouchWalkEnvCfg_PLAY(Go2CrouchWalkEnvCfg):
     def __post_init__(self):
