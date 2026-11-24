@@ -8,6 +8,7 @@ _TASKS = {
     "Go2-Posture-Walk": ("posture:Go2PostureWalkEnvCfg", "posture:Go2PostureWalkPPORunnerCfg"),
     "Go2-Posture-Walk-Play": ("posture:Go2PostureWalkEnvCfg_PLAY", "posture:Go2PostureWalkPPORunnerCfg"),
     "Go2-Crouch-Walk": ("crouch:Go2CrouchWalkEnvCfg", "crouch:Go2CrouchWalkPPORunnerCfg"),
+    "Go2-Crouch-Robust": ("crouch:Go2CrouchRobustEnvCfg", "crouch:Go2CrouchWalkPPORunnerCfg"),
     "Go2-Crouch-Walk-Play": ("crouch:Go2CrouchWalkEnvCfg_PLAY", "crouch:Go2CrouchWalkPPORunnerCfg"),
 }
 

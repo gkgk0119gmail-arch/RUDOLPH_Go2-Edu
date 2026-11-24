@@ -164,6 +164,24 @@ class Go2CrouchWalkEnvCfg(Go2PostureWalkEnvCfg):
 
 
 @configclass
+class Go2CrouchRobustEnvCfg(Go2CrouchWalkEnvCfg):
+    """Stage 2: continue stage 1 with friction / motor-gain randomisation, more pushes, calf-contact penalty, and a
+    lower height limit (0.12 m) so that the true lowest usable height shows up."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        f = self.events.physics_material.params
+        f["static_friction_range"], f["dynamic_friction_range"] = (0.3, 1.25), (0.3, 1.0)
+        f["make_consistent"] = True
+        self.events.push_robot.interval_range_s = (4.0, 8.0)
+        self.events.motor_gains = EventTerm(func=mdp.randomize_actuator_gains, mode="startup", params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"), "stiffness_distribution_params": (0.85, 1.15),
+            "damping_distribution_params": (0.8, 1.2), "operation": "scale"})
+        self.commands.base_height.range, self.commands.base_height.start_low = (0.12, 0.32), 0.16
+        self.rewards.thigh_contact.params["sensor_cfg"].body_names = [".*_thigh", ".*_calf"]
+
+
+@configclass
 class Go2CrouchWalkEnvCfg_PLAY(Go2CrouchWalkEnvCfg):
     def __post_init__(self):
         super().__post_init__()
