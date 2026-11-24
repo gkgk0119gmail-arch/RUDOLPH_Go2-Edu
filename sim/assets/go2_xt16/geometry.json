@@ -1,0 +1,39 @@
+{
+  "top_z_above_base": {
+    "xt16": 0.1627,
+    "xt16_mount": 0.0867,
+    "d435i": 0.0718
+  },
+  "highest_known": 0.1627,
+  "payload": {
+    "mass": 1.025,
+    "com": [
+      0.15759,
+      -0.00128,
+      0.112
+    ],
+    "inertia_about_com": [
+      [
+        0.0017263,
+        0.0002026,
+        0.000689
+      ],
+      [
+        0.0002026,
+        0.0035873,
+        -7.24e-05
+      ],
+      [
+        0.000689,
+        -7.24e-05,
+        0.0033158
+      ]
+    ]
+  },
+  "not_modelled": [
+    "Orin NX dock",
+    "handle bar near the LiDAR",
+    "D435i bracket",
+    "cables"
+  ]
+}

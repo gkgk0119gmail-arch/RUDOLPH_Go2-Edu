@@ -1,7 +1,12 @@
-# Unitree Go2 EDU Plus — 3D LiDAR SLAM & Navigation
+# Unitree Go2 EDU Plus — 강화학습 기반 미지 환경 탐사
 
 Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D435i**를 얹어
-3D SLAM → 자율주행(Nav2)까지 구축하는 프로젝트입니다. 모든 처리는 로봇에 탑재된 **Jetson Orin NX**에서 실행합니다.
+**처음 보는 재난 실내에서 사람을 찾는** 연구 프로젝트입니다. 낮은 틈은 몸을 낮춰 통과하고, 만난 사람의 제보로 탐색 순서를 바꿉니다.
+
+- **실로봇** (이 문서): 3D SLAM → 자율주행(Nav2). 로봇에 탑재된 **Jetson Orin NX**에서 실행합니다.
+- **시뮬레이션·강화학습**: [sim/README.md](sim/README.md). 학습 PC(RTX 3090, Isaac Lab)에서 실행합니다.
+
+최종 갱신: **2026-11-24**
 
 ![map preview](docs/images/map_20261122_171243.png)
 <sub>FAST-LIO2로 직접 매핑한 실내 지도 (Hesai XT16 + Go2 IMU, 5 cm voxel, 약 23만 점)</sub>
@@ -9,6 +14,20 @@ Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D43
 ---
 
 ## 진행 상황
+
+### 강화학습·탐사 (시뮬레이션)
+
+| 단계 | 상태 | 비고 |
+|---|---|---|
+| Go2 + XT16 + D435i 모델 | ✅ 완료 | 손잡이·독 등은 실측 대기 |
+| 낮춰 걷기 정책 (강화학습, 평지) | 🔄 진행 중 | base 0.164 m까지 보행, 평가 중 넘어짐 0 |
+| 2D 탐색에서 제보·틈 연동 | ✅ 완료 | 분리 방식보다 21.5 / 24.0 % 빠름 |
+| 제보 해석 (Qwen3-VL-8B) | 🔄 1차 완료 | 말 해석만 맡길 때, 큰 건물에서 이득 |
+| 험지·무작위화, student 증류 | ⬜ 예정 | |
+| 탐사 정책 강화학습 | ⬜ 예정 | 현재 탐사 순서는 규칙 기반 |
+| 실로봇 틈 통과 | ⬜ 예정 | |
+
+### 실로봇
 
 | 단계 | 상태 | 비고 |
 |---|---|---|
@@ -127,6 +146,7 @@ camera_init (FAST-LIO 월드)
 │   └── fast_lio_hesai_foxy.patch  # FAST-LIO(ROS2) 수정분: Hesai 입력 처리 + Foxy 호환
 ├── maps/                     # 직접 딴 지도 (.pcd)
 ├── tools/                    # render_map_preview.py, install_korean.sh
+├── sim/                      # 시뮬레이션·강화학습 (sim/README.md)
 └── docs/                     # setup.md, troubleshooting.md, images/
 ```
 

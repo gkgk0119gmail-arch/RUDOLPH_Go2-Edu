@@ -1,0 +1,45 @@
+#usda 1.0
+(
+    defaultPrim = "go2_description"
+    metersPerUnit = 1
+    upAxis = "Z"
+    doc = "Stock Isaac Lab Go2 + XT16 / mount / D435i colliders (tools/build_go2_xt16.py). Payload mass: env event."
+)
+
+def Xform "go2_description" (
+    prepend references = @../go2_stock/https/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/6.1/Isaac/IsaacLab/Robots/Unitree/Go2/go2.usd@
+)
+{
+    over "base"
+    {
+        def Cylinder "xt16" (prepend apiSchemas = ["PhysicsCollisionAPI"])
+        {
+            uniform token axis = "Z"
+            double radius = 0.0515
+            double height = 0.076
+            color3f[] primvars:displayColor = [(0.12, 0.12, 0.13)]
+            double3 xformOp:translate = (0.1454, 0, 0.1247)
+            float3 xformOp:rotateXYZ = (0, 0, 0)
+            float3 xformOp:scale = (1, 1, 1)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+        }
+        def Cube "xt16_mount" (prepend apiSchemas = ["PhysicsCollisionAPI"])
+        {
+            double size = 1
+            color3f[] primvars:displayColor = [(0.12, 0.12, 0.13)]
+            double3 xformOp:translate = (0.1454, 0, 0.07185)
+            float3 xformOp:rotateXYZ = (0, 0, 0)
+            float3 xformOp:scale = (0.1, 0.1, 0.0297)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+        }
+        def Cube "d435i" (prepend apiSchemas = ["PhysicsCollisionAPI"])
+        {
+            double size = 1
+            color3f[] primvars:displayColor = [(0.12, 0.12, 0.13)]
+            double3 xformOp:translate = (0.311986, -0.0175, 0.05685108)
+            float3 xformOp:rotateXYZ = (0, 13.0061, 0)
+            float3 xformOp:scale = (0.02505, 0.09, 0.025)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+        }
+    }
+}
