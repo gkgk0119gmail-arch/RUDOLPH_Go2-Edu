@@ -24,7 +24,9 @@ Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D43
 | 2D 탐색에서 제보·틈 연동 | ✅ 완료 | 분리 방식보다 21.5 / 24.0 % 빠름 |
 | 제보 해석 (Qwen3-VL-8B) | 🔄 1차 완료 | 말 해석만 맡길 때, 큰 건물에서 이득 |
 | student 증류 | 🔄 1차 완료 | 선속도 없이 동작. 3·4단계 미채택, 5단계 학습 중 |
-| 탐사 정책 강화학습 | ⬜ 예정 | 현재 탐사 순서는 규칙 기반 |
+| 논문 정독 | 🔄 진행 중 | [docs/papers](docs/papers/README.md), HiPAN 완료 |
+| HiPAN식 상위 항법 (teacher → depth student) | ⬜ 예정 | |
+| 목표점 선택 (3D 지도 커버리지 + 텍스트, 가중치 학습) | ⬜ 예정 | |
 | 실로봇 틈 통과 | ⬜ 예정 | |
 
 ### 실로봇
