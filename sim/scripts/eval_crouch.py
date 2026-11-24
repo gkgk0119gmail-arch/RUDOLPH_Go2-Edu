@@ -54,13 +54,17 @@ with launch_simulation(cfg, args):
     from go2_lab.crouch import body_height
 
     env = ManagerBasedRLEnv(cfg=cfg)
-    sd = torch.load(args.ckpt, map_location=env.device, weights_only=True)["actor_state_dict"]
-    nin = sd["mlp.0.weight"].shape[1]
+    from go2_lab.student import History, Student, mlp_actor
 
-    def act(x):
-        for i in (0, 2, 4):
-            x = torch.nn.functional.elu(x @ sd[f"mlp.{i}.weight"].T + sd[f"mlp.{i}.bias"])
-        return x @ sd["mlp.6.weight"].T + sd["mlp.6.bias"]
+    ck = torch.load(args.ckpt, map_location=env.device, weights_only=True)
+    if "student" in ck:  # no base linear velocity, 50-step history
+        net = Student().to(env.device)
+        net.load_state_dict(ck["student"])
+        hist = History(env.num_envs, env.device)
+        act, nin = (lambda x: net(hist.push(x))[0]), 51
+    else:
+        sd = ck["actor_state_dict"]
+        act, nin = mlp_actor(sd), sd["mlp.0.weight"].shape[1]
 
     n = env.num_envs
     idx = torch.arange(n, device=env.device)
