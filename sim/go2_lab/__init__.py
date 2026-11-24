@@ -11,6 +11,7 @@ _TASKS = {
     "Go2-Crouch-Robust": ("crouch:Go2CrouchRobustEnvCfg", "crouch:Go2CrouchWalkPPORunnerCfg"),
     "Go2-Crouch-Delay": ("crouch:Go2CrouchDelayEnvCfg", "crouch:Go2CrouchWalkPPORunnerCfg"),
     "Go2-Crouch-Step": ("crouch:Go2CrouchStepEnvCfg", "crouch:Go2CrouchWalkPPORunnerCfg"),
+    "Go2-Crouch-Gait": ("crouch:Go2CrouchGaitEnvCfg", "crouch:Go2CrouchWalkPPORunnerCfg"),
     "Go2-Crouch-Walk-Play": ("crouch:Go2CrouchWalkEnvCfg_PLAY", "crouch:Go2CrouchWalkPPORunnerCfg"),
 }
 

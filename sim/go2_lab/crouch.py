@@ -262,6 +262,33 @@ class Go2CrouchStepEnvCfg(Go2CrouchDelayEnvCfg):
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"), "target": 0.022 + 0.06})
 
 
+def stuck_feet(env, command_name: str, sensor_cfg: SceneEntityCfg, limit: float) -> torch.Tensor:
+    """Time beyond ``limit`` [s] that each foot has stayed on the ground while a motion is commanded (dragged feet)."""
+    t = env.scene[sensor_cfg.name].data.current_contact_time.torch[:, sensor_cfg.body_ids]
+    moving = env.command_manager.get_command(command_name)[:, :3].norm(dim=1) > 0.1
+    return (t - limit).clamp(0.0, 1.0).sum(1) * moving
+
+
+def track_speed_exp(env, command_name: str, std: float, asset_name: str = "robot") -> torch.Tensor:
+    err = env.scene[asset_name].data.root_lin_vel_b.torch[:, :2] - env.command_manager.get_command(command_name)[:, :2]
+    return torch.exp(-err.square().sum(1) / std**2)
+
+
+@configclass
+class Go2CrouchGaitEnvCfg(Go2CrouchStepEnvCfg):
+    """Stage 5: stage 4 lifted its feet but stalled at low speed and kept one hind foot down: every foot has to step
+    while moving, slow commands are tracked more sharply, milder swing penalty."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.swing_height.weight = -25.0
+        self.rewards.swing_height.params["target"] = 0.022 + 0.05
+        self.rewards.stuck_feet = RewTerm(func=stuck_feet, weight=-0.5, params={"command_name": "base_velocity",
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"), "limit": 0.4})
+        self.rewards.track_slow = RewTerm(func=track_speed_exp, weight=1.5, params={"command_name": "base_velocity",
+                                                                                    "std": 0.15})
+
+
 @configclass
 class Go2CrouchWalkEnvCfg_PLAY(Go2CrouchWalkEnvCfg):
     def __post_init__(self):
