@@ -26,7 +26,7 @@ add_launcher_args(ap)
 args = ap.parse_args()
 sys.argv = sys.argv[:1]
 HEIGHTS = (0.36, 0.32, 0.28, 0.24, 0.20, 0.16, 0.12)
-ROLLS = (0.0, 0.3)
+ROLLS = (0.0, 0.5, 1.0)
 SPEED = 0.4
 cfg, agent = resolve_task_config("Go2-HiPAN-Low", "rsl_rl_cfg_entry_point")
 cfg.scene.num_envs = args.per * len(HEIGHTS) * len(ROLLS)
