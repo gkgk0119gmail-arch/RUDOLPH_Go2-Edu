@@ -13,6 +13,7 @@ _TASKS = {
     "Go2-Crouch-Step": ("crouch:Go2CrouchStepEnvCfg", "crouch:Go2CrouchWalkPPORunnerCfg"),
     "Go2-Crouch-Gait": ("crouch:Go2CrouchGaitEnvCfg", "crouch:Go2CrouchWalkPPORunnerCfg"),
     "Go2-HiPAN-Low": ("hipan_low:HipanLowEnvCfg", "hipan_low:HipanLowPPORunnerCfg"),
+    "Go2-HiPAN-Low-FT": ("hipan_low:HipanLowFTEnvCfg", "hipan_low:HipanLowPPORunnerCfg"),
     "Go2-HiPAN-Low-Play": ("hipan_low:HipanLowEnvCfg_PLAY", "hipan_low:HipanLowPPORunnerCfg"),
     "Go2-Crouch-Walk-Play": ("crouch:Go2CrouchWalkEnvCfg_PLAY", "crouch:Go2CrouchWalkPPORunnerCfg"),
 }

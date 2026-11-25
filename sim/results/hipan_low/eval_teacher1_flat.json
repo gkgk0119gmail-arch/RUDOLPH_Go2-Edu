@@ -1,0 +1,146 @@
+{
+ "ckpt": "logs/rsl_rl/hipan_low/2026-11-25_00-25-25_teacher/model_5999.pt",
+ "rough": false,
+ "rows": [
+  {
+   "height_cmd": 0.36,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.351,
+   "roll": 0.001,
+   "speed": 0.323
+  },
+  {
+   "height_cmd": 0.32,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.351,
+   "roll": 0.001,
+   "speed": 0.374
+  },
+  {
+   "height_cmd": 0.28,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.35,
+   "roll": 0.001,
+   "speed": 0.349
+  },
+  {
+   "height_cmd": 0.24,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.353,
+   "roll": 0.001,
+   "speed": 0.348
+  },
+  {
+   "height_cmd": 0.2,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.355,
+   "roll": 0.001,
+   "speed": 0.373
+  },
+  {
+   "height_cmd": 0.16,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.354,
+   "roll": 0.001,
+   "speed": 0.399
+  },
+  {
+   "height_cmd": 0.12,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.355,
+   "roll": 0.001,
+   "speed": 0.374
+  },
+  {
+   "height_cmd": 0.36,
+   "roll_cmd": 0.3,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.349,
+   "roll": 0.299,
+   "speed": 0.369
+  },
+  {
+   "height_cmd": 0.32,
+   "roll_cmd": 0.3,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.35,
+   "roll": 0.299,
+   "speed": 0.368
+  },
+  {
+   "height_cmd": 0.28,
+   "roll_cmd": 0.3,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.347,
+   "roll": 0.299,
+   "speed": 0.32
+  },
+  {
+   "height_cmd": 0.24,
+   "roll_cmd": 0.3,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.351,
+   "roll": 0.299,
+   "speed": 0.368
+  },
+  {
+   "height_cmd": 0.2,
+   "roll_cmd": 0.3,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.352,
+   "roll": 0.299,
+   "speed": 0.392
+  },
+  {
+   "height_cmd": 0.16,
+   "roll_cmd": 0.3,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.35,
+   "roll": 0.3,
+   "speed": 0.319
+  },
+  {
+   "height_cmd": 0.12,
+   "roll_cmd": 0.3,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.353,
+   "roll": 0.299,
+   "speed": 0.345
+  }
+ ]
+}

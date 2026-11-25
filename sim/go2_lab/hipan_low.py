@@ -215,22 +215,24 @@ def record_friction(env, env_ids, asset_cfg: SceneEntityCfg):
 
 
 # --------------------------------------------------------------------------------------------- rewards (Table III)
+# Tracking terms use the squared error, exp(-e^2/s): Table III writes ||.||^2 for velocity; the other exponents are
+# lost in the PDF text, and |e|/0.0025 m gave no height gradient (teacher 1 ignored the height command, 0.35 m always).
 def track_lin_vel(env, command_name, scale):
     v = env.scene["robot"].data.root_lin_vel_b.torch[:, :2]
-    return torch.exp(-(env.command_manager.get_command(command_name)[:, :2] - v).norm(dim=1) / scale)
+    return torch.exp(-(env.command_manager.get_command(command_name)[:, :2] - v).square().sum(1) / scale)
 
 
 def track_yaw(env, command_name, scale):
     w = env.scene["robot"].data.root_ang_vel_b.torch[:, 2]
-    return torch.exp(-(env.command_manager.get_command(command_name)[:, 2] - w).abs() / scale)
+    return torch.exp(-(env.command_manager.get_command(command_name)[:, 2] - w).square() / scale)
 
 
 def track_height(env, command_name, scale):
-    return torch.exp(-(env.command_manager.get_command(command_name)[:, 0] - body_height(env)).abs() / scale)
+    return torch.exp(-(env.command_manager.get_command(command_name)[:, 0] - body_height(env)).square() / scale)
 
 
 def track_roll(env, command_name, scale):
-    return torch.exp(-(env.command_manager.get_command(command_name)[:, 0] - roll_world(env)).abs() / scale)
+    return torch.exp(-(env.command_manager.get_command(command_name)[:, 0] - roll_world(env)).square() / scale)
 
 
 def smooth_action(env):
@@ -388,6 +390,15 @@ class HipanLowRewardsCfg:
     joint_limit = RewTerm(func=joint_limit_any, weight=-10.0)
     collision = RewTerm(func=collision_any, weight=-10.0, params={
         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["base", "Head_.*", ".*_hip", ".*_thigh", ".*_calf"])})
+
+
+@configclass
+class HipanLowFTEnvCfg(HipanLowEnvCfg):
+    """Fine-tune from a trained teacher: penalties at full weight from the first step."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.curriculum.penalty_scale.params["start"] = 1.0
 
 
 @configclass

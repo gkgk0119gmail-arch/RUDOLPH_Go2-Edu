@@ -32,6 +32,20 @@ Unitree Go2 EDU Plus(Hesai XT16 + RealSense D435i)가 **처음 보는 재난 실
 | 루프 클로저 (Orin NX) | 예정 | 목표: 출발점 복귀 오차 0.3 m 이하 (현재 0.4–0.7 m) |
 | 실로봇 틈 통과 | 예정 | |
 
+## 0. HiPAN 하위 보행 teacher
+
+`go2_lab/hipan_low.py`, 평가 `scripts/eval_hipan_low.py` (평지, 0.4 m/s, 몸 높이 명령 7단계 × roll 0/0.3 rad, 각 16대).
+
+| | 1차 teacher (6,000회) |
+|---|---|
+| 넘어짐 | 0 % |
+| 속도 | 0.32–0.40 m/s (명령 0.4) |
+| roll | 0.299 rad (명령 0.3) |
+| **몸 높이** | **명령 0.12–0.36 m 모두 0.35 m (명령 무시)** |
+
+원인: 높이 보상을 `exp(−|e|/0.0025)`로 구현해 오차 2.5 mm 밖에서는 기울기가 없었음. Table III의 속도 항은 `‖e‖²/0.25`(제곱)로 표기되어 있고, 다른 항의 지수는 PDF 텍스트 추출에서 빠진 것으로 판단 → 네 추종 항 모두 `exp(−e²/s)`로 수정 (높이 σ≈5 cm).
+1차 가중치에서 이어 3,000회 미세조정 중 (`Go2-HiPAN-Low-FT`, 벌점 처음부터 100 %, `scripts/queue_hipan_low_ft.sh`). 결과: `results/hipan_low/`.
+
 ## 1. 낮춰 걷기
 
 기존 자세 보행 정책(`weights/go2_posture_walk_model_1999.pt`)에 높이 명령 입력 하나를 더해 이어 학습했다.
