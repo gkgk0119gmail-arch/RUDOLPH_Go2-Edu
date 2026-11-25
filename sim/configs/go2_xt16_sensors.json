@@ -1,18 +1,64 @@
 {
   "_comment": "Single source of the real robot's sensor layout. Units m, rad, kg. Frames are in Go2 base.",
   "xt16": {
-    "optical_xyz": [0.1454, 0.0, 0.1331], "optical_yaw": 1.5707963267948966,
-    "optical_above_base": 0.0464, "height": 0.076, "radius": 0.0515, "mass": 0.8,
+    "optical_xyz": [
+      0.1454,
+      0.0,
+      0.1331
+    ],
+    "optical_yaw": 1.5707963267948966,
+    "optical_above_base": 0.0464,
+    "height": 0.076,
+    "radius": 0.0515,
+    "mass": 0.8,
     "source": "pose: Unitree-Go2-EDU-Plus TF; height/diameter/mass: Hesai PandarXT-16 manual (side connector); optical centre 46.4 mm: ori-drs/hesai_description XT32 (same housing size) -- confirm on XT16"
   },
   "mount": {
-    "trunk_top_z": 0.057, "size_xy": [0.10, 0.10], "mass": 0.15,
+    "trunk_top_z": 0.057,
+    "size_xy": [
+      0.1,
+      0.1
+    ],
+    "mass": 0.15,
     "source": "height DERIVED (XT16 bottom minus trunk top); footprint and mass ASSUMED"
   },
   "d435i": {
-    "camera_link_xyz": [0.32, 0.0, 0.055], "camera_link_pitch": 0.227,
-    "box": [0.02505, 0.090, 0.025], "box_center_in_camera_link": [-0.008225, -0.0175, 0.0], "mass": 0.075,
+    "camera_link_xyz": [
+      0.32,
+      0.0,
+      0.055
+    ],
+    "camera_link_pitch": 0.227,
+    "box": [
+      0.02505,
+      0.09,
+      0.025
+    ],
+    "box_center_in_camera_link": [
+      -0.008225,
+      -0.0175,
+      0.0
+    ],
+    "mass": 0.075,
     "source": "pose: Unitree-Go2-EDU-Plus TF (x estimated there); box/offset/mass: realsense-ros _d435.urdf.xacro@45fd6446"
   },
-  "unmeasured": ["Orin NX dock", "handle bar near the LiDAR", "D435i bracket", "cables"]
+  "unmeasured": [
+    "Orin NX dock",
+    "handle bar near the LiDAR",
+    "D435i bracket",
+    "cables"
+  ],
+  "measured_2026_11_25": {
+    "top_point": "handle bar over the XT16 (higher than the XT16 top)",
+    "handle_top_lying_m": 0.3,
+    "xt16_top_standing_m_approx": 0.5,
+    "source": "tape measure by the team, robot on flat floor; lying = belly-down damping pose",
+    "still_needed": [
+      "trunk top height lying (to place the handle relative to base)",
+      "handle top standing",
+      "max width",
+      "total length incl. rear connector",
+      "D435i mount"
+    ]
+  }
 }
