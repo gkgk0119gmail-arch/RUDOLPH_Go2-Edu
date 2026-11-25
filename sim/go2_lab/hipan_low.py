@@ -399,6 +399,11 @@ class HipanLowFTEnvCfg(HipanLowEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.curriculum.penalty_scale.params["start"] = 1.0
+        # teacher 1 + squared reward plateaued at 9 cm height error (crouching costs more in penalties than 0.2 pays):
+        # lower the height range step by step (as in our crouch stage 2, which reached 0.12 m) and weigh height higher
+        h = self.commands.base_height
+        h.curriculum, h.start_low, h.step, h.advance_error, h.rel_edge = True, 0.30, 0.01, 0.025, 0.2
+        self.rewards.track_height.weight = 0.6
 
 
 @configclass
