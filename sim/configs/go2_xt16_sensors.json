@@ -54,11 +54,18 @@
     "xt16_top_standing_m_approx": 0.5,
     "source": "tape measure by the team, robot on flat floor; lying = belly-down damping pose",
     "still_needed": [
-      "trunk top height lying (to place the handle relative to base)",
-      "handle top standing",
+      "handle top standing (cross-check)",
       "max width",
       "total length incl. rear connector",
       "D435i mount"
-    ]
+    ],
+    "trunk_top_lying_front_m": 0.2,
+    "trunk_top_lying_rear_m": 0.17,
+    "derived": {
+      "lying_base_height_m": 0.128,
+      "lying_pitch_deg": 4.5,
+      "handle_top_above_base_m": 0.17,
+      "note": "trunk top = base + 0.057 (URDF). Lying base = mean(0.20,0.17) - 0.057 ~= 0.128. Handle 0.30 m lying, over the XT16 near the front: 0.30 - (0.20 - 0.057) ~= 0.157-0.17 above base; taken as 0.17 (XT16 top in the model is 0.163, handle sits ~1 cm higher)."
+    }
   }
 }
