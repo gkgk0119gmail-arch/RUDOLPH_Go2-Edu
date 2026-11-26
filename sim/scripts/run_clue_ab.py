@@ -22,13 +22,14 @@ ap.add_argument("--n_victims", type=int, default=6)
 ap.add_argument("--n_clues", type=int, default=3)
 ap.add_argument("--quality", default="spoken")
 ap.add_argument("--variants", default="A,B")
+ap.add_argument("--p_wrong", type=float, default=0.0)
 ap.add_argument("--workers", type=int, default=16)
 a = ap.parse_args()
 ALL = {"A": dict(beta=0.0), "B": dict(beta=1.0), "A_doc": dict(beta=0.0, score="doc"), "B_doc": dict(beta=1.0, score="doc"),
        "B_mobile": dict(beta=1.0, mobility="unknown")}
 V = {k: ALL[k] for k in a.variants.split(",")}
 lo, hi = map(int, a.seeds.split(":"))
-kw = dict(n_victims=a.n_victims, n_clues=a.n_clues, quality=a.quality)
+kw = dict(n_victims=a.n_victims, n_clues=a.n_clues, quality=a.quality, p_wrong=a.p_wrong)
 
 
 def boot(x, n=4000, rng=np.random.default_rng(0)):

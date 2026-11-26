@@ -46,9 +46,11 @@ class Building:
     rooms: list = field(default_factory=list)
 
 
-def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str = "spoken") -> Building:
+def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str = "spoken", p_wrong: float = 0.0) -> Building:
     """quality "spoken": direction to 45 deg, distance x U(0.85, 1.15) rounded to 5 m (how people talk)
-               "exact":  true bearing and distance, narrow distribution (upper bound for geometric clues)"""
+               "exact":  true bearing and distance, narrow distribution (upper bound for geometric clues)
+    p_wrong: each clue is wrong with this probability (left/right swapped, or distance x2, or x0.5), said just as
+             confidently -- the robot is not told which ones."""
     rng = np.random.default_rng([seed, 11])
     m = lambda v: int(round(v / CELL))  # noqa: E731
     n_side = int(rng.integers(4, 8))
@@ -113,7 +115,15 @@ def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str 
             c = {"direction_deg": bearing, "distance_m": math.hypot(dx, dy), "_half_angle": math.radians(3), "_dist_rel": 0.05}
         else:
             c = {"direction_deg": int(round(bearing / 45) * 45) % 360, "distance_m": float(max(5, round(dist / 5) * 5))}
-        clues.append({"utterance": "clue", "anchor": "reporter", "certainty": "high", "count": 1, "victim": int(k), **c})
+        wrong = None
+        if rng.random() < p_wrong:
+            wrong = str(rng.choice(["mirror", "far", "near"]))
+            if wrong == "mirror":
+                c["direction_deg"] = (360 - c["direction_deg"]) % 360
+            else:
+                c["distance_m"] = float(max(5, round(c["distance_m"] * (2.0 if wrong == "far" else 0.5) / 5) * 5))
+        clues.append({"utterance": "clue", "anchor": "reporter", "certainty": "high", "count": 1, "victim": int(k),
+                      "wrong": wrong, **c})
     return Building(g, start, facing, victims, clues, rooms)
 
 
@@ -124,7 +134,8 @@ class Search:
     def __init__(self, b: Building, a=1.0, beta=0.0, c=1.0, use_clues=None, seed=0, mobility="static",
                  score="rate", t0=10.0):
         """score "rate": expected victims behind f / (travel time + t0), expected victims =
-             beta * sum of clue masses + (victims not covered by an active clue) * G(f) / sum G
+             w * sum of clue masses + (victims not covered by a clue + (1 - w) * active clues) * G(f) / sum G,
+             w = clip(beta, 0, 1) = trust in the clues (0 = coverage search A, 1 = full trust)
            score "doc": a * G/maxG + beta * M/maxM - c * C/maxC (plan doc form)."""
         self.b, self.a, self.beta, self.c, self.score, self.t0 = b, a, beta, c, score, t0
         self.use_clues = beta > 0 if use_clues is None else use_clues
@@ -238,9 +249,11 @@ class Search:
                 M += np.bincount(owner[sel], weights=m[sel], minlength=n)
         C = np.array([d[p] for p in tg])
         if self.score == "rate":
+            # each active clue stands for one person: trust w of it sits in the clue map, 1 - w in the open space
+            w = min(max(self.beta, 0.0), 1.0)
             active = sum(m is not None for m in self.maps.values())
-            rest = max(sum(f is None for f in self.found) - active, 0) if self.beta > 0 else sum(f is None for f in self.found)
-            E = self.a * rest * G / max(G.sum(), 1e-9) + self.beta * M
+            rest = max(sum(f is None for f in self.found) - active, 0) + active * (1 - w)
+            E = self.a * rest * G / max(G.sum(), 1e-9) + w * M
             S = E / (C + self.t0)
         else:
             S = self.a * G / max(G.max(), 1e-9) - self.c * C / max(C.max(), 1e-9)
