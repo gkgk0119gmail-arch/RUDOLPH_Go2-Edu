@@ -5,3 +5,13 @@ __pycache__/
 build/
 install/
 log/
+
+# real-robot run logs (large binary, kept locally / on the NX)
+deploy/logs/
+# videos and raw arrays from sim evaluation (regenerate with the scripts)
+sim/results/hipan_nav/videos/
+sim/results/hipan_nav/*.npy
+# intermediate checkpoints (final weights are committed)
+sim/weights/*_it[0-9]*.pt
+# C++ weights live in deploy/weights; sim/weights/deploy keeps the npz only
+sim/weights/deploy/*.bin

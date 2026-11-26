@@ -3,10 +3,10 @@
 Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D435i**를 얹어
 **처음 보는 재난 실내에서 사람을 찾는** 연구 프로젝트입니다. 낮은 틈은 몸을 낮춰 통과하고, 만난 사람의 제보로 탐색 순서를 바꿉니다.
 
-- **실로봇** (이 문서): 3D SLAM → 자율주행(Nav2). 로봇에 탑재된 **Jetson Orin NX**에서 실행합니다.
+- **실로봇** (이 문서): 3D SLAM, 학습한 보행 정책 실행. 로봇에 탑재된 **Jetson Orin NX**에서 실행합니다.
 - **시뮬레이션·강화학습**: [sim/README.md](sim/README.md). 학습 PC(RTX 3090, Isaac Lab)에서 실행합니다.
 
-최종 갱신: **2026-11-24**
+최종 갱신: **2026-11-26** — 시뮬레이션에서 학습한 HiPAN 하위 보행 정책을 실제 Go2에 올려 걷기 성공 ([시험 기록](docs/real_test_20261126.md))
 
 ![map preview](docs/images/map_20261122_171243.png)
 <sub>FAST-LIO2로 직접 매핑한 실내 지도 (Hesai XT16 + Go2 IMU, 5 cm voxel, 약 23만 점)</sub>
@@ -20,14 +20,16 @@ Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D43
 | 단계 | 상태 | 비고 |
 |---|---|---|
 | Go2 + XT16 + D435i 모델 | ✅ 완료 | 손잡이·독 등은 실측 대기 |
-| HiPAN 하위 보행 teacher | 🔄 재학습 중 (높이 추종 해결, 낮은 자세 속도 개선 중) | 1차(6,000회): 속도·roll 추종 성공, 높이 명령 무시(항상 0.35 m) → 추종 보상 제곱오차화 후에도 오차 9 cm 정체 → 높이 단계 커리큘럼(0.30 m부터 1 cm씩) + 높이 가중치 0.6으로 1차에서 이어 4,000회 미세조정 중 (`sim/go2_lab/hipan_low.py`) |
-| (이전) 낮춰 걷기 정책 1–5단계 | ⏹ 대체됨 | teacher 2단계 완료: base 0.122 m까지 보행, 머리 접촉까지 세면 스트레스 넘어짐 12 % (student) → 4단계 2–3 %, 저속 보행은 개선 중 |
+| HiPAN 하위 보행 teacher | ✅ 완료 | 높이 0.12–0.36 m·roll·속도 명령 추종 (`sim/go2_lab/hipan_low.py`, `teacher_ft2`) |
+| HiPAN 하위 보행 student (몸 감각만) | ✅ 완료 → **실로봇 동작** | 평지는 teacher와 같은 성능, 거친 지형 넘어짐 15–16 % (teacher 2–3 %) |
+| 하위 보행 걸음 보정 (발 공중 시간·미끄러짐, 속도 추종 강화) | 🔄 학습 중 | 실로봇에서 회전·옆걸음 때 발을 끄는 문제, 속도가 명령의 0.7배 |
+| (이전) 낮춰 걷기 정책 1–5단계 | ⏹ 대체됨 | HiPAN 구조로 전환 |
 | 2D 탐색에서 제보·틈 연동 | ✅ 완료 | 분리 방식보다 21.5 / 24.0 % 빠름 |
 | 제보 해석 (Qwen3-VL-8B) | 🔄 1차 완료 | 말 해석만 맡길 때, 큰 건물에서 이득 |
-| student 증류 | 🔄 1차 완료 | 선속도 없이 동작. 3·4단계 미채택, 5단계 학습 중 |
 | 논문 정독 | 🔄 진행 중 | [docs/papers](docs/papers/README.md), HiPAN 완료 |
-| HiPAN식 상위 항법 (teacher → depth student) | ⬜ 예정 | |
-| 목표점 선택 (3D 지도 커버리지 + 텍스트, 가중치 학습) | ⬜ 예정 | |
+| HiPAN식 상위 항법 teacher (특권 지도 + PGCL) | ✅ v1·v2 완료 | 처음 보는 지도 도착 82–83 %, v2는 트인 곳에서 다시 일어섬 ([설계·결과](docs/hipan_nav_design.md)) |
+| HiPAN식 상위 항법 student (depth + GRU) | ✅ v1 완료, v2 증류 중 | **지도 없이 depth만으로 도착 82 %** (teacher와 같음) |
+| 목표점 선택 (3D 지도 커버리지 + 텍스트, 가중치 학습) | ⬜ 예정 | 지금은 목표점 무작위 |
 | 실로봇 틈 통과 | ⬜ 예정 | |
 
 ### 실로봇
@@ -43,7 +45,13 @@ Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D43
 | 3D LIO 실시간 매핑 (FAST-LIO2) | ✅ 완료 | rviz 실시간 확인, PCD 저장 |
 | 루프 클로저 (전역 지도 보정) | ⏳ 다음 단계 | 출발점 복귀 오차 0.4~0.7 m, z 드리프트 보정 필요 |
 | 2D 점유 격자 지도 생성 | ⬜ 예정 | 3D 지도 → Nav2용 2D map |
-| Nav2 자율주행 (`/cmd_vel` → Go2 Sport API) | ⬜ 예정 | 장애물: Hesai + RealSense |
+| Nav2 자율주행 (`/cmd_vel` → Go2 Sport API) | ⏸ 보류 | 학습한 상위 항법으로 대체 예정 |
+| **학습한 하위 보행 정책 실행 (C++ 50 Hz)** | ✅ 완료 | 시뮬레이션 학습 그대로(zero-shot) 서기·걷기·옆걸음·회전 성공. [시험 기록](docs/real_test_20261126.md) |
+| 센서 실측 (관절·IMU 노이즈, `foot_force`, 리모컨) | ✅ 완료 | 노이즈는 시뮬레이션 범위 안, 접촉 기준값 20 (98.5 % 일치) |
+| 속도 추종·정책 추정 검증 (FAST-LIO) | ✅ 완료 | 실제 속도 = 명령의 0.70배, 정책의 속도·높이·roll 추정은 정확 |
+| D435i depth sim-to-real 비교 | ✅ 완료 | 848×480으로 시야 일치, 기울기·빈 픽셀·노이즈 차이 확인 |
+| 상위 항법 student 실로봇 (섀도 → 실제) | ⬜ 예정 | |
+| 실로봇 틈 통과 | ⬜ 예정 | |
 
 ---
 
@@ -56,7 +64,7 @@ Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D43
 | └ 내장 전면 카메라 | 머리 앞 | 메인보드 경유 | `/frontvideostream` (~4 Hz) |
 | **Jetson Orin NX** (확장 독) | 몸체 위 | eth0 192.168.123.18 | 모든 ROS2 처리 (이 저장소) |
 | **Hesai PandarXT-16** | 몸체 위 앞쪽 플레이트 | 유선 LAN (192.168.123.20) | SLAM 주 센서 |
-| **Intel RealSense D435i** | 머리 위 브라켓 | Orin NX USB 3.0 | Nav2 근거리 장애물 (예정) |
+| **Intel RealSense D435i** | 머리 위 브라켓 | Orin NX USB 3.0 | 상위 항법 student 입력 (depth 848×480) |
 
 **소프트웨어:** JetPack 5.1.1 (L4T R35.3.1) · Ubuntu 20.04 · **ROS2 Foxy** (+ ROS1 Noetic 설치됨) · CycloneDDS 0.10.x
 
@@ -130,7 +138,7 @@ camera_init (FAST-LIO 월드)
 .
 ├── env.sh                    # ROS2 환경 일괄 설정 (source env.sh)
 ├── cyclonedds.xml            # DDS 설정 (eth0, spdp-only multicast, 16 MB rx buffer)
-├── start_sensors.sh          # Hesai + RealSense 드라이버  (--no-realsense 옵션)
+├── start_sensors.sh          # Hesai + RealSense 드라이버  (--no-realsense / --rs-sim: depth 848x480 = 항법 student 시야)
 ├── view_all.sh               # 센서 + 정적 TF + rviz (센서 정합 확인용)
 ├── slam_mapping.sh           # 실시간 3D 매핑: Hesai + IMU 브리지 + FAST-LIO2 + 맵 누적기 + rviz
 ├── config/
@@ -144,11 +152,13 @@ camera_init (FAST-LIO 월드)
 ├── ros2_ws/src/              # 직접 작성한 ROS2 패키지
 │   ├── go2_imu_bridge/       # /lowstate → /go2/imu (sensor_msgs/Imu, ~400 Hz)
 │   ├── go2_map_tools/        # map_accumulator: 복셀 지도 누적 · /map_cloud · PCD 저장 서비스
+│   ├── go2_hipan_low/        # 학습한 하위 보행 정책 실행기 (C++ 50 Hz, /lowstate → MLP → /lowcmd, 안전장치)
 │   └── livox_ros_driver2/    # 메시지 전용 스텁 (FAST-LIO 빌드 의존성 해결용)
 ├── patches/
 │   └── fast_lio_hesai_foxy.patch  # FAST-LIO(ROS2) 수정분: Hesai 입력 처리 + Foxy 호환
 ├── maps/                     # 직접 딴 지도 (.pcd)
 ├── tools/                    # render_map_preview.py, install_korean.sh
+├── deploy/                   # 실로봇 정책 실행·검증: 가중치(.bin), 실행/종료 스크립트, 모드 전환, 실측 분석
 ├── sim/                      # 시뮬레이션·강화학습 (sim/README.md)
 └── docs/                     # setup.md, troubleshooting.md, images/
 ```
@@ -177,6 +187,23 @@ python3 tools/render_map_preview.py maps/<map>.pcd docs/images/<map>.png
 ```
 
 **매핑 팁:** 시작 후 2~3초는 로봇을 정지 (IMU 초기화) · 천천히 보행 · 가능하면 출발점으로 복귀 · 도중에 앉히지 않기.
+
+### 학습한 보행 정책 실행 (HiPAN 하위 student)
+
+로봇을 **엎드리게 한 뒤** 실행한다. 자세한 조작·안전 규칙은 [시험 기록](docs/real_test_20261126.md).
+
+```bash
+cd deploy
+python3 mode_switch.py check            # 지금 켜진 Unitree 제어기 (기본 'mcf')
+python3 mode_switch.py release --yes    # Unitree 기본 보행 끄기 (엎드린 상태에서!)
+./start_hipan_live.sh                   # NX 화면에 노드 창: 3초 동안 일어섬 → start = 보행, L2+A = 서기/앉기, L2+B = 비상정지
+./stop_hipan_low.sh                     # 안전 종료: 기본 자세 → 앉기 → 종료  (서 있을 때 노드를 강제로 끄지 말 것)
+python3 mode_switch.py select mcf       # Unitree 기본 보행 복구 (엎드린 상태에서)
+
+# 검증용
+./start_slam_sim.sh                     # FAST-LIO + RealSense 848x480 (tmux "slam")
+python3 record_track.py --seconds 90 --out logs/track.npz   # FAST-LIO + 정책 디버그 기록 → analyze_track.py
+```
 
 ### 주요 토픽
 

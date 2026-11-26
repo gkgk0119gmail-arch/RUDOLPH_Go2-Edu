@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>go2_hipan_low</name>
+  <version>0.1.0</version>
+  <description>HiPAN low-level student controller for the real Go2 (/lowstate -> MLP 50 Hz -> /lowcmd)</description>
+  <maintainer email="unitree@example.com">unitree</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>unitree_go</depend>
+  <depend>eigen</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

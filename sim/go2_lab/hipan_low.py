@@ -217,6 +217,31 @@ def record_friction(env, env_ids, asset_cfg: SceneEntityCfg):
 # --------------------------------------------------------------------------------------------- rewards (Table III)
 # Tracking terms use the squared error, exp(-e^2/s): Table III writes ||.||^2 for velocity; the other exponents are
 # lost in the PDF text, and |e|/0.0025 m gave no height gradient (teacher 1 ignored the height command, 0.35 m always).
+def _t(x):
+    import warp as wp
+
+    return x if torch.is_tensor(x) else (x.torch if hasattr(x, "torch") else wp.to_torch(x))
+
+
+def feet_air_time_moving(env, command_name, sensor_cfg: SceneEntityCfg, threshold: float):
+    """Gait term (not in HiPAN Table III): sum over feet of (air time - threshold) at touchdown, only while a
+    velocity OR yaw command is given (Isaac Lab's version ignores yaw, so turning on the spot could still shuffle)."""
+    cs = env.scene.sensors[sensor_cfg.name]
+    first = _t(cs.compute_first_contact(env.step_dt))[:, sensor_cfg.body_ids].float()
+    air = _t(cs.data.last_air_time)[:, sensor_cfg.body_ids]
+    cmd = env.command_manager.get_command(command_name)
+    moving = (cmd[:, :2].norm(dim=1) > 0.1) | (cmd[:, 2].abs() > 0.2)
+    return ((air - threshold) * first).sum(1) * moving.float()
+
+
+def feet_slide_l1(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg):
+    """Gait term: horizontal speed of feet that are in contact (dragging the feet instead of stepping)."""
+    f = _t(env.scene.sensors[sensor_cfg.name].data.net_forces_w_history)[:, :, sensor_cfg.body_ids].norm(dim=-1)
+    contact = f.amax(1) > 1.0
+    v = env.scene[asset_cfg.name].data.body_lin_vel_w.torch[:, asset_cfg.body_ids, :2].norm(dim=-1)
+    return (v * contact.float()).sum(1)
+
+
 def track_lin_vel(env, command_name, scale):
     v = env.scene["robot"].data.root_lin_vel_b.torch[:, :2]
     return torch.exp(-(env.command_manager.get_command(command_name)[:, :2] - v).square().sum(1) / scale)
@@ -404,6 +429,25 @@ class HipanLowFTEnvCfg(HipanLowEnvCfg):
         h = self.commands.base_height
         h.curriculum, h.start_low, h.step, h.advance_error, h.rel_edge = True, 0.30, 0.01, 0.025, 0.2
         self.rewards.track_height.weight = 0.6
+
+
+@configclass
+class HipanLowGaitEnvCfg(HipanLowFTEnvCfg):
+    """Fine-tune from teacher_ft2 with gait terms. On the real Go2 the Table III policy turned and side-stepped by
+    sliding its feet on the floor (Table III has no air-time / slip term; every penalty favours small joint motion)."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.feet_air_time = RewTerm(func=feet_air_time_moving, weight=0.5, params={
+            "command_name": "base_velocity", "threshold": 0.25,
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=FEET)})
+        self.rewards.feet_slide = RewTerm(func=feet_slide_l1, weight=-0.25, params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=FEET),
+            "asset_cfg": SceneEntityCfg("robot", body_names=FEET)})
+        # real Go2 walked at ~0.70x the commanded vx / wz (sim ~0.87x at 0.4 m/s): exp(-e^2/0.25) pays 88 % of the
+        # reward at 70 % tracking. A narrower kernel makes the last 30 % worth it.
+        self.rewards.track_vel.params["scale"] = 0.1
+        self.rewards.track_yaw.params["scale"] = 0.1
 
 
 @configclass

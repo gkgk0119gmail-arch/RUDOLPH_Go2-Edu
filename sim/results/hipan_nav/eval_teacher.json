@@ -1,0 +1,79 @@
+{
+ "teacher": "logs/rsl_rl/hipan_nav/2026-11-26_00-40-15_teacher/model_3999.pt",
+ "student": null,
+ "seed": 11,
+ "switch": 0.0,
+ "pgcl": false,
+ "results": {
+  "all": {
+   "n": 480,
+   "success": 0.819,
+   "fall": 0.081,
+   "timeout": 0.1,
+   "unfinished": 0.0,
+   "time_s": 9.0,
+   "speed": 0.86,
+   "crouch_share": 0.192
+  },
+  "easy": {
+   "n": 240,
+   "success": 0.875,
+   "fall": 0.05,
+   "timeout": 0.075,
+   "unfinished": 0.0,
+   "time_s": 9.0,
+   "speed": 0.9,
+   "crouch_share": 0.188
+  },
+  "mid": {
+   "n": 120,
+   "success": 0.783,
+   "fall": 0.108,
+   "timeout": 0.108,
+   "unfinished": 0.0,
+   "time_s": 9.7,
+   "speed": 0.8,
+   "crouch_share": 0.228
+  },
+  "hard": {
+   "n": 120,
+   "success": 0.742,
+   "fall": 0.117,
+   "timeout": 0.142,
+   "unfinished": 0.0,
+   "time_s": 8.4,
+   "speed": 0.83,
+   "crouch_share": 0.167
+  },
+  "path<6m": {
+   "n": 179,
+   "success": 0.844,
+   "fall": 0.039,
+   "timeout": 0.117,
+   "unfinished": 0.0,
+   "time_s": 6.0,
+   "speed": 0.81,
+   "crouch_share": 0.198
+  },
+  "path6-10m": {
+   "n": 189,
+   "success": 0.831,
+   "fall": 0.101,
+   "timeout": 0.069,
+   "unfinished": 0.0,
+   "time_s": 9.1,
+   "speed": 0.91,
+   "crouch_share": 0.197
+  },
+  "path>10m": {
+   "n": 112,
+   "success": 0.759,
+   "fall": 0.116,
+   "timeout": 0.125,
+   "unfinished": 0.0,
+   "time_s": 14.1,
+   "speed": 0.87,
+   "crouch_share": 0.176
+  }
+ }
+}

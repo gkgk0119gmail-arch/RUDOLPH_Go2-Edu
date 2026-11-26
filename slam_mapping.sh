@@ -3,6 +3,7 @@
 #   맵 저장 (다른 터미널, source ~/Desktop/3DOG/env.sh 후):
 #     ros2 service call /map_accumulator/save_map std_srvs/srv/Trigger   → maps/map_YYYYmmdd_HHMMSS.pcd
 #   RealSense 는 매핑에 안 쓰므로 기본 OFF.  같이 켜려면: ./slam_mapping.sh --with-realsense
+#   항법 student 시야(깊이 848x480)로 같이 켜기: ./slam_mapping.sh --with-realsense-sim
 #   rviz 없이: ./slam_mapping.sh rviz:=false
 DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$DIR/env.sh"
@@ -10,7 +11,11 @@ PIDS=()
 
 SENSOR_ARGS="--no-realsense"; LAUNCH_ARGS=()
 for a in "$@"; do
-  if [ "$a" = "--with-realsense" ]; then SENSOR_ARGS=""; else LAUNCH_ARGS+=("$a"); fi
+  case "$a" in
+    --with-realsense) SENSOR_ARGS="" ;;
+    --with-realsense-sim) SENSOR_ARGS="--rs-sim" ;;
+    *) LAUNCH_ARGS+=("$a") ;;
+  esac
 done
 
 "$DIR/start_sensors.sh" $SENSOR_ARGS & PIDS+=($!)

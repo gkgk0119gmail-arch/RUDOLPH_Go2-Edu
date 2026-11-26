@@ -1,0 +1,218 @@
+{
+ "ckpt": "logs/rsl_rl/hipan_low/2026-11-25_10-44-34_teacher_ft2/model_9998.pt",
+ "student": null,
+ "delay_ms": 20,
+ "rough": false,
+ "rows": [
+  {
+   "height_cmd": 0.36,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.355,
+   "roll": 0.032,
+   "speed": 0.348
+  },
+  {
+   "height_cmd": 0.32,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.325,
+   "roll": 0.021,
+   "speed": 0.385
+  },
+  {
+   "height_cmd": 0.28,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.286,
+   "roll": 0.02,
+   "speed": 0.288
+  },
+  {
+   "height_cmd": 0.24,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.246,
+   "roll": -0.001,
+   "speed": 0.343
+  },
+  {
+   "height_cmd": 0.2,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.204,
+   "roll": -0.013,
+   "speed": 0.354
+  },
+  {
+   "height_cmd": 0.16,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.162,
+   "roll": -0.008,
+   "speed": 0.249
+  },
+  {
+   "height_cmd": 0.12,
+   "roll_cmd": 0.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.126,
+   "roll": -0.003,
+   "speed": 0.227
+  },
+  {
+   "height_cmd": 0.36,
+   "roll_cmd": 0.5,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.35,
+   "roll": 0.45,
+   "speed": 0.403
+  },
+  {
+   "height_cmd": 0.32,
+   "roll_cmd": 0.5,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.323,
+   "roll": 0.493,
+   "speed": 0.301
+  },
+  {
+   "height_cmd": 0.28,
+   "roll_cmd": 0.5,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.286,
+   "roll": 0.519,
+   "speed": 0.29
+  },
+  {
+   "height_cmd": 0.24,
+   "roll_cmd": 0.5,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.247,
+   "roll": 0.516,
+   "speed": 0.345
+  },
+  {
+   "height_cmd": 0.2,
+   "roll_cmd": 0.5,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.208,
+   "roll": 0.508,
+   "speed": 0.322
+  },
+  {
+   "height_cmd": 0.16,
+   "roll_cmd": 0.5,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.172,
+   "roll": 0.463,
+   "speed": 0.26
+  },
+  {
+   "height_cmd": 0.12,
+   "roll_cmd": 0.5,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.136,
+   "roll": 0.315,
+   "speed": 0.226
+  },
+  {
+   "height_cmd": 0.36,
+   "roll_cmd": 1.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.35,
+   "roll": 0.033,
+   "speed": 0.334
+  },
+  {
+   "height_cmd": 0.32,
+   "roll_cmd": 1.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.321,
+   "roll": 0.157,
+   "speed": 0.385
+  },
+  {
+   "height_cmd": 0.28,
+   "roll_cmd": 1.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.285,
+   "roll": 0.338,
+   "speed": 0.373
+  },
+  {
+   "height_cmd": 0.24,
+   "roll_cmd": 1.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.244,
+   "roll": 0.349,
+   "speed": 0.351
+  },
+  {
+   "height_cmd": 0.2,
+   "roll_cmd": 1.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.205,
+   "roll": 0.153,
+   "speed": 0.287
+  },
+  {
+   "height_cmd": 0.16,
+   "roll_cmd": 1.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.161,
+   "roll": -0.009,
+   "speed": 0.252
+  },
+  {
+   "height_cmd": 0.12,
+   "roll_cmd": 1.0,
+   "speed_cmd": 0.4,
+   "n": 16,
+   "fell": 0.0,
+   "height": 0.128,
+   "roll": -0.097,
+   "speed": 0.117
+  }
+ ]
+}

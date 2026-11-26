@@ -22,6 +22,8 @@ ap.add_argument("--out")
 ap.add_argument("--per", type=int, default=16)
 ap.add_argument("--seconds", type=float, default=8.0)
 ap.add_argument("--rough", action="store_true", help="training terrain mix instead of a plane")
+ap.add_argument("--student", help="HiPAN student weights; --ckpt is then only used to build the runner")
+ap.add_argument("--delay_ms", type=int, default=0, help="fixed control delay (multiple of 5 ms)")
 add_launcher_args(ap)
 args = ap.parse_args()
 sys.argv = sys.argv[:1]
@@ -39,6 +41,10 @@ for k in ("base_velocity", "base_height", "base_roll"):
     getattr(cfg.commands, k).resampling_time_range = (1e6, 1e6)
 cfg.episode_length_s = args.seconds + 2
 cfg.seed = 7
+if args.delay_ms:
+    from go2_lab.crouch import delayed_action
+
+    delayed_action(cfg, args.delay_ms // 5, args.delay_ms // 5)
 
 with launch_simulation(cfg, args):
     import gymnasium as gym
@@ -56,6 +62,17 @@ with launch_simulation(cfg, args):
     policy = runner.get_inference_policy(device=env.unwrapped.device)
     u = env.unwrapped
     n, dev = u.num_envs, u.device
+    hist = None
+    if args.student:
+        from go2_lab.hipan_student import HipanStudent, History
+
+        ck = torch.load(args.student, map_location=dev, weights_only=True)
+        net = HipanStudent(d=ck["obs_dim"]).to(dev).eval()
+        net.load_state_dict(ck["student"])
+        hist = History(n, dev, d=ck["obs_dim"])
+
+        def policy(o):  # noqa: F811
+            return net(hist.push(o["student"]))[0]
     idx = torch.arange(n, device=dev)
     hc = torch.tensor(HEIGHTS, device=dev)[(idx // args.per) % len(HEIGHTS)]
     rc = torch.tensor(ROLLS, device=dev)[idx // (args.per * len(HEIGHTS))]
@@ -76,6 +93,8 @@ with launch_simulation(cfg, args):
         fix()
         with torch.inference_mode():
             obs, _, done, _ = venv.step(policy(obs))
+            if hist is not None:
+                hist.reset(done)
         alive &= ~u.termination_manager.terminated
         if t >= warm:
             m = alive.float()
@@ -95,5 +114,6 @@ with launch_simulation(cfg, args):
             print(rows[-1], flush=True)
     if args.out:
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.out).write_text(json.dumps(dict(ckpt=args.ckpt, rough=args.rough, rows=rows), indent=1))
+        Path(args.out).write_text(json.dumps(dict(ckpt=args.ckpt, student=args.student, delay_ms=args.delay_ms,
+                                                  rough=args.rough, rows=rows), indent=1))
     env.close()

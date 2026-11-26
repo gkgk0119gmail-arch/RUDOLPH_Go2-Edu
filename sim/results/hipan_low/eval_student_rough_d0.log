@@ -1,0 +1,260 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1795604194.011779 1341347 descriptor_database.cc:633] File already exists in database: grpc/health/v1/health.proto
+W0000 00:00:1795604194.011847 1341347 message.cc:301] Protobuf GeneratedMessageFactory: File is already registered: grpc/health/v1/health.proto
+Warning: Possible version incompatibility. Attempting to load carb::ujitso::IFactory with version v0.3 against v0.2.
+[ISAACLAB] KitLauncher initialization complete
+[INFO]: Parsing configuration from: go2_lab.hipan_low:HipanLowEnvCfg
+[INFO]: Parsing configuration from: go2_lab.hipan_low:HipanLowPPORunnerCfg
+[INFO]: Base environment:
+	Environment device    : cuda:0
+	Environment seed      : 7
+	Physics step-size     : 0.005
+	Rendering step-size   : 0.02
+	Environment step-size : 0.02
+[INFO] Generating terrains based on curriculum took Last: 0.944855 s
+[INFO]: Registered backend 'physx' for factory Articulation.
+[INFO]: Registered backend 'physx' for factory RayCaster.
+[INFO]: Registered backend 'physx' for factory ContactSensor.
+[INFO]: Physics scene prim path: /physicsScene
+[INFO]: Time taken for scene creation Last: 3.906620 s, Mean: 3.906620 s, Std: 0.000000 s, N: 1
+[INFO]: Scene manager:  <class InteractiveScene>
+	Number of environments: 336
+	Environment spacing   : 3.0
+	Source prim name      : /World/envs/env_0
+	Global prim paths     : ['/World/ground']
+	Replicate physics     : True
+[INFO]: Simulation parameters for joints in /World/envs/env_[^/]+/Robot:
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                Simulation Joint Information (Prim path: /World/envs/env_[^/]+/Robot)                                                 |
++-------+----------------+-----------+---------+----------+-----------------+------------------+------------------+------------------+-----------------+---------------+
+| Index | Name           | Stiffness | Damping | Armature | Static Friction | Dynamic Friction | Viscous Friction | Position Limits  | Velocity Limits | Effort Limits |
++-------+----------------+-----------+---------+----------+-----------------+------------------+------------------+------------------+-----------------+---------------+
+|   0   | FL_hip_joint   |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.047, 1.047]  |      30.100     |     23.700    |
+|   1   | FR_hip_joint   |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.047, 1.047]  |      30.100     |     23.700    |
+|   2   | RL_hip_joint   |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.047, 1.047]  |      30.100     |     23.700    |
+|   3   | RR_hip_joint   |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.047, 1.047]  |      30.100     |     23.700    |
+|   4   | FL_thigh_joint |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.571, 3.491]  |      30.100     |     23.700    |
+|   5   | FR_thigh_joint |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.571, 3.491]  |      30.100     |     23.700    |
+|   6   | RL_thigh_joint |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-0.524, 4.538]  |      30.100     |     23.700    |
+|   7   | RR_thigh_joint |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-0.524, 4.538]  |      30.100     |     23.700    |
+|   8   | FL_calf_joint  |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-2.723, -0.838] |      15.700     |     45.430    |
+|   9   | FR_calf_joint  |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-2.723, -0.838] |      15.700     |     45.430    |
+|   10  | RL_calf_joint  |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-2.723, -0.838] |      15.700     |     45.430    |
+|   11  | RR_calf_joint  |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-2.723, -0.838] |      15.700     |     45.430    |
++-------+----------------+-----------+---------+----------+-----------------+------------------+------------------+------------------+-----------------+---------------+
+[INFO]: Read mesh prim: /World/ground/terrain/mesh with 478782 vertices and 2775324 faces.
+[INFO]: Time taken for simulation start Last: 1.984402 s, Mean: 1.984402 s, Std: 0.000000 s, N: 1
+[INFO] Command Manager:  <CommandManager> contains 3 active terms.
++------------------------------------------------+
+|              Active Command Terms              |
++-------+---------------+------------------------+
+| Index | Name          |          Type          |
++-------+---------------+------------------------+
+|   0   | base_velocity | UniformVelocityCommand |
+|   1   | base_height   |   BodyHeightCommand    |
+|   2   | base_roll     |      RollCommand       |
++-------+---------------+------------------------+
+
+[INFO] Event Manager:  <EventManager> contains 2 active terms.
++---------------------------------------+
+| Active Event Terms in Mode: 'startup' |
++----------+----------------------------+
+|  Index   | Name                       |
++----------+----------------------------+
+|    0     | physics_material           |
+|    1     | base_com                   |
+|    2     | record_friction            |
+|    3     | payload                    |
+|    4     | motor                      |
++----------+----------------------------+
++-------------------------------------+
+| Active Event Terms in Mode: 'reset' |
++-------+-----------------------------+
+| Index | Name                        |
++-------+-----------------------------+
+|   0   | base_external_force_torque  |
+|   1   | reset_base                  |
+|   2   | reset_robot_joints          |
++-------+-----------------------------+
+
+[INFO] Recorder Manager:  <RecorderManager> contains 0 active terms.
++-----------------------+
+| Active Recorder Terms |
++------------+----------+
+|   Index    | Name     |
++------------+----------+
++------------+----------+
+
+[INFO]: Resolved joint names for the action term JointPositionAction: ['FL_hip_joint', 'FR_hip_joint', 'RL_hip_joint', 'RR_hip_joint', 'FL_thigh_joint', 'FR_thigh_joint', 'RL_thigh_joint', 'RR_thigh_joint', 'FL_calf_joint', 'FR_calf_joint', 'RL_calf_joint', 'RR_calf_joint'] [tensor([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11], device='cuda:0',
+       dtype=torch.int32)]
+[INFO] Action Manager:  <ActionManager> contains 1 active terms.
++---------------------------------+
+| Active Action Terms (shape: 12) |
++-------+-----------+-------------+
+| Index | Name      |   Dimension |
++-------+-----------+-------------+
+|   0   | joint_pos |          12 |
++-------+-----------+-------------+
+
+[INFO] Observation Manager: <ObservationManager> contains 3 groups.
++------------------------------------------------------------+
+| Active Observation Terms in Group: 'policy' (shape: (84,)) |
++-------------+------------------------------+---------------+
+|    Index    | Name                         |     Shape     |
++-------------+------------------------------+---------------+
+|      0      | joint_pos                    |     (12,)     |
+|      1      | joint_vel                    |     (12,)     |
+|      2      | feet_pos                     |     (12,)     |
+|      3      | feet_contact                 |      (4,)     |
+|      4      | roll_pitch                   |      (2,)     |
+|      5      | ang_vel                      |      (3,)     |
+|      6      | actions                      |     (12,)     |
+|      7      | vel_cmd                      |      (3,)     |
+|      8      | height_cmd                   |      (1,)     |
+|      9      | roll_cmd                     |      (1,)     |
+|      10     | motion                       |      (5,)     |
+|      11     | domain                       |     (17,)     |
++-------------+------------------------------+---------------+
++---------------------------------------------------------------------+
+| Active Observation Terms in Group: 'heightmap' (shape: (1, 41, 41)) |
++-----------------+--------------+------------------------------------+
+|      Index      | Name         |               Shape                |
++-----------------+--------------+------------------------------------+
+|        0        | hmap         |            (1, 41, 41)             |
++-----------------+--------------+------------------------------------+
++-------------------------------------------------------------+
+| Active Observation Terms in Group: 'student' (shape: (62,)) |
++--------------+------------------------------+---------------+
+|    Index     | Name                         |     Shape     |
++--------------+------------------------------+---------------+
+|      0       | joint_pos                    |     (12,)     |
+|      1       | joint_vel                    |     (12,)     |
+|      2       | feet_pos                     |     (12,)     |
+|      3       | feet_contact                 |      (4,)     |
+|      4       | roll_pitch                   |      (2,)     |
+|      5       | ang_vel                      |      (3,)     |
+|      6       | actions                      |     (12,)     |
+|      7       | vel_cmd                      |      (3,)     |
+|      8       | height_cmd                   |      (1,)     |
+|      9       | roll_cmd                     |      (1,)     |
++--------------+------------------------------+---------------+
+
+[INFO] Termination Manager:  <TerminationManager> contains 2 active terms.
++---------------------------------+
+|     Active Termination Terms    |
++-------+--------------+----------+
+| Index | Name         | Time Out |
++-------+--------------+----------+
+|   0   | time_out     |   True   |
+|   1   | base_contact |  False   |
++-------+--------------+----------+
+
+[INFO] Reward Manager:  <RewardManager> contains 14 active terms.
++--------------------------------+
+|      Active Reward Terms       |
++-------+--------------+---------+
+| Index | Name         |  Weight |
++-------+--------------+---------+
+|   0   | track_vel    |     0.4 |
+|   1   | track_yaw    |     0.2 |
+|   2   | track_height |     0.2 |
+|   3   | track_roll   |     0.2 |
+|   4   | action_rate  |   -0.01 |
+|   5   | smooth       |    -0.1 |
+|   6   | pitch        |    -0.5 |
+|   7   | vz           |    -0.2 |
+|   8   | wxy          |  -0.001 |
+|   9   | qd           | -0.0001 |
+|   10  | qdd          |  -2e-07 |
+|   11  | torque       | -0.0001 |
+|   12  | joint_limit  |   -10.0 |
+|   13  | collision    |   -10.0 |
++-------+--------------+---------+
+
+[INFO] Curriculum Manager:  <CurriculumManager> contains 0 active terms.
++-------------------------+
+| Active Curriculum Terms |
++-------------+-----------+
+|    Index    | Name      |
++-------------+-----------+
++-------------+-----------+
+
+[INFO]: Completed setting up the environment...
+--------------------------------------------------------------------------------
+Resolved observation sets: 
+	 actor :  ['policy', 'heightmap']
+	 critic :  ['policy', 'heightmap']
+--------------------------------------------------------------------------------
+Actor Model: CNNModel(
+  (obs_normalizer): EmpiricalNormalization()
+  (distribution): GaussianDistribution()
+  (mlp): MLP(
+    (0): Linear(in_features=596, out_features=512, bias=True)
+    (1): ELU(alpha=1.0)
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): ELU(alpha=1.0)
+    (4): Linear(in_features=256, out_features=128, bias=True)
+    (5): ELU(alpha=1.0)
+    (6): Linear(in_features=128, out_features=12, bias=True)
+  )
+  (cnns): ModuleDict(
+    (heightmap): CNN(
+      (0): Conv2d(1, 16, kernel_size=(5, 5), stride=(2, 2))
+      (1): ELU(alpha=1.0)
+      (2): Conv2d(16, 32, kernel_size=(3, 3), stride=(2, 2))
+      (3): ELU(alpha=1.0)
+      (4): Conv2d(32, 32, kernel_size=(3, 3), stride=(2, 2))
+      (5): ELU(alpha=1.0)
+      (6): Flatten(start_dim=1, end_dim=-1)
+    )
+  )
+)
+Critic Model: CNNModel(
+  (obs_normalizer): EmpiricalNormalization()
+  (mlp): MLP(
+    (0): Linear(in_features=596, out_features=512, bias=True)
+    (1): ELU(alpha=1.0)
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): ELU(alpha=1.0)
+    (4): Linear(in_features=256, out_features=128, bias=True)
+    (5): ELU(alpha=1.0)
+    (6): Linear(in_features=128, out_features=1, bias=True)
+  )
+  (cnns): ModuleDict(
+    (heightmap): CNN(
+      (0): Conv2d(1, 16, kernel_size=(5, 5), stride=(2, 2))
+      (1): ELU(alpha=1.0)
+      (2): Conv2d(16, 32, kernel_size=(3, 3), stride=(2, 2))
+      (3): ELU(alpha=1.0)
+      (4): Conv2d(32, 32, kernel_size=(3, 3), stride=(2, 2))
+      (5): ELU(alpha=1.0)
+      (6): Flatten(start_dim=1, end_dim=-1)
+    )
+  )
+)
+{'height_cmd': 0.36, 'roll_cmd': 0.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.354, 'roll': 0.018, 'speed': 0.345}
+{'height_cmd': 0.32, 'roll_cmd': 0.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.323, 'roll': 0.016, 'speed': 0.349}
+{'height_cmd': 0.28, 'roll_cmd': 0.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.284, 'roll': 0.01, 'speed': 0.35}
+{'height_cmd': 0.24, 'roll_cmd': 0.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.248, 'roll': -0.005, 'speed': 0.286}
+{'height_cmd': 0.2, 'roll_cmd': 0.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.206, 'roll': -0.01, 'speed': 0.251}
+{'height_cmd': 0.16, 'roll_cmd': 0.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.167, 'roll': -0.012, 'speed': 0.254}
+{'height_cmd': 0.12, 'roll_cmd': 0.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.188, 'height': 0.128, 'roll': -0.001, 'speed': 0.107}
+{'height_cmd': 0.36, 'roll_cmd': 0.5, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.25, 'height': 0.345, 'roll': 0.452, 'speed': 0.27}
+{'height_cmd': 0.32, 'roll_cmd': 0.5, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.25, 'height': 0.312, 'roll': 0.479, 'speed': 0.31}
+{'height_cmd': 0.28, 'roll_cmd': 0.5, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.312, 'height': 0.278, 'roll': 0.495, 'speed': 0.233}
+{'height_cmd': 0.24, 'roll_cmd': 0.5, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.625, 'height': 0.238, 'roll': 0.479, 'speed': 0.293}
+{'height_cmd': 0.2, 'roll_cmd': 0.5, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.438, 'height': 0.202, 'roll': 0.474, 'speed': 0.265}
+{'height_cmd': 0.16, 'roll_cmd': 0.5, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.75, 'height': 0.169, 'roll': 0.464, 'speed': 0.256}
+{'height_cmd': 0.12, 'roll_cmd': 0.5, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.125, 'height': 0.135, 'roll': 0.361, 'speed': 0.124}
+{'height_cmd': 0.36, 'roll_cmd': 1.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.348, 'roll': 0.134, 'speed': 0.345}
+{'height_cmd': 0.32, 'roll_cmd': 1.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.318, 'roll': 0.246, 'speed': 0.382}
+{'height_cmd': 0.28, 'roll_cmd': 1.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.28, 'roll': 0.536, 'speed': 0.356}
+{'height_cmd': 0.24, 'roll_cmd': 1.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.244, 'roll': 0.42, 'speed': 0.278}
+{'height_cmd': 0.2, 'roll_cmd': 1.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.0, 'height': 0.202, 'roll': 0.15, 'speed': 0.256}
+{'height_cmd': 0.16, 'roll_cmd': 1.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.062, 'height': 0.161, 'roll': -0.035, 'speed': 0.156}
+{'height_cmd': 0.12, 'roll_cmd': 1.0, 'speed_cmd': 0.4, 'n': 16, 'fell': 0.25, 'height': 0.121, 'roll': -0.089, 'speed': 0.036}
+[INFO]: SimulationContext cleared
+Loading user config located at: '/home/yax/Desktop/3DOG/IsaacLab/.venv/lib/python3.12/site-packages/isaacsim/kit/data/Kit/IsaacLab/3.0/user.config.json'
+2026-11-25T10:56:34Z [0ms] [Warning] [omni.usd_config.extension] Enable omni.materialx.libs extension to use MaterialX
+2026-11-25T10:56:42Z [7,795ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+2026-11-25T10:56:43Z [9,194ms] [Warning] [isaaclab.envs.mdp.commands.velocity_command] The velocity command has the 'ranges.heading' attribute set to '(-3.141592653589793, 3.141592653589793)' but the heading command is not active. Consider setting the flag for the heading command to True.
