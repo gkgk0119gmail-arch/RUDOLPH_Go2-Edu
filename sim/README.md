@@ -59,7 +59,7 @@ Unitree Go2 EDU Plus(Hesai XT16 + RealSense D435i)가 **처음 보는 재난 실
   - **시간에 따라 이웃 칸으로 번짐** (움직이는 대상 베이지안 탐색의 예측 단계). 벽은 막고 미지 칸은 통과로 가정. 속도 D: 갇힘·깔림 0, 모름 0.01, 이동 중 0.1 m²/s (10분 뒤 퍼짐 0 / 3.5 / 11 m)
   - 카메라로 봤는데 없음 → 그 칸 × (1 − 검출확률) 후 재정규화
   - 프론티어별 뒤쪽 확률 질량: 미지 칸을 **길 따라(BFS) 처음 닿는 프론티어**에 배정 → 벽 너머 오배정 방지
-  - 그림: `results/clue/belief_demo.png` (`scripts/demo_belief.py`)
+  - 그림: `results/clue/belief_demo.png` (`scripts/demo_belief.py`), 3D 움짤: `results/clue/belief_3d.gif` (`scripts/anim_belief3d.py`)
 
 ## 0. HiPAN 하위 보행 teacher
 
