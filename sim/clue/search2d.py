@@ -118,9 +118,9 @@ def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str 
         room = next((r for r in rooms if r["box"][0] <= v[0] < r["box"][1] and r["box"][2] <= v[1] < r["box"][3]), None)
         if quality == "semantic" and room is not None:
             # "복도 따라가다 왼쪽 세 번째 방": counted from the lobby end, sides as seen walking east
-            c = {"semantic": ["corridor:main", f"turn:{room['side']}", f"room:{room['ordinal']}"]}
+            c = {"semantic": ["corridor:main", f"side:{room['side']}", f"room:{room['ordinal']}"]}
             if rng.random() < p_wrong:
-                c["semantic"][1] = "turn:" + ("right" if room["side"] == "left" else "left")
+                c["semantic"][1] = "side:" + ("right" if room["side"] == "left" else "left")
                 c["wrong"] = "mirror"
             clues.append({"utterance": "clue", "certainty": "high", "count": 1, "victim": int(k), "wrong": c.pop("wrong", None), **c})
             continue
@@ -182,8 +182,8 @@ class Search:
         if k in self.fixed:
             return self.fixed[k]
         c = self.b.clues[k]
-        side = c["semantic"][1].split(":")[1]
-        n = int(c["semantic"][2].split(":")[1])
+        side = next(t.split(":")[1] for t in c["semantic"] if t.split(":")[0] in ("side", "turn"))
+        n = int(next(t.split(":")[1] for t in c["semantic"] if t.startswith("room:")))
         rooms = sorted((r for r in self.b.rooms if r["side"] == side), key=lambda r: r["ordinal"])
         labelled = [all(self.known[q] == FREE for q in r["door"]) for r in rooms]
         j = 0                                    # rooms counted so far from the lobby end (door seen, none skipped)

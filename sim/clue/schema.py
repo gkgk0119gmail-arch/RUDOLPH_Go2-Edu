@@ -20,6 +20,8 @@ Conventions
   semantic      ordered route / place tokens "kind:value" (grammar below) -- the path a person would describe
   count         number of victims, null if not said ("여러 명" -> null, count_qual "several")
   appearance    {"age": child|adult|elderly, "sex": male|female, "top_color": <COLORS>} keys only when said
+  mobility      "static" trapped / pinned / collapsed ("갇혀", "깔려", "쓰러져", "못 움직여") | "mobile" moving ("돌아다녀",
+                "나가려고 했어") | null -- sets how fast the belief spreads over time
   certainty     speaker's own certainty: "high" (plain statement) | "mid" ("아마", "~것 같아요") | "low" ("잘 모르겠는데")
 """
 from __future__ import annotations
@@ -34,14 +36,16 @@ COLORS = ("red", "blue", "yellow", "green", "black", "white", "gray")
 # semantic token grammar
 SEM_KINDS = {
     "corridor": ("inner", "end", "main", "left", "right"),   # 안쪽 / 끝 / 큰 / 왼쪽 / 오른쪽 복도
-    "turn": ("left", "right"),                               # 좌회전 / 우회전
+    "turn": ("left", "right"),                               # 좌회전 / 우회전 (a change of direction)
+    "side": ("left", "right"),                               # 복도 왼편 / 오른편에 있는 (which side, no turn)
     "room": tuple(str(i) for i in range(1, 6)) + ("last", "next"),  # n번째 방 / 마지막 방 / 옆방
     "place": PLACES,                                         # 지나가거나 도착하는 장소
     "near": OBJECTS + PLACES,                                # ~ 옆 / 근처
     "under": OBJECTS,                                        # ~ 밑
 }
 CERTAINTY = {"high": 0.9, "mid": 0.6, "low": 0.3}
-KEYS = ("utterance", "anchor", "direction_deg", "distance_m", "distance_qual", "floor", "floor_rel", "semantic", "count",
+MOBILITY = ("static", "mobile")
+KEYS = ("utterance", "mobility", "anchor", "direction_deg", "distance_m", "distance_qual", "floor", "floor_rel", "semantic", "count",
         "count_qual", "appearance", "certainty")
 
 
@@ -91,7 +95,8 @@ def normalize(d: dict | None) -> tuple[dict | None, list[str]]:
                 out[k] = typ(d[k])
             except (TypeError, ValueError):
                 bad.append(f"{k} {d[k]!r}")
-    for k, ok in (("distance_qual", ("near", "far")), ("count_qual", ("several",)), ("certainty", tuple(CERTAINTY))):
+    for k, ok in (("distance_qual", ("near", "far")), ("count_qual", ("several",)), ("certainty", tuple(CERTAINTY)),
+                  ("mobility", MOBILITY)):
         if d.get(k) in ok:
             out[k] = d[k]
         elif d.get(k) is not None:
