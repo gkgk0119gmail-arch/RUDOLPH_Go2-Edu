@@ -26,7 +26,7 @@ PROMPT = """재난 현장 수색 로봇이 사람의 말을 들었습니다. 이
   corridor:inner|end|main|left|right (안쪽/끝/큰/왼쪽/오른쪽 복도)
   turn:left|right (방향을 꺾음: 왼쪽으로 꺾다·돌다, 좌회전 / 우회전)
   side:left|right (꺾지 않고 복도의 어느 편인지: "왼쪽 세 번째 방", "오른편 방들 중에")
-  room:1..5|last|next (n번째 방, 마지막·맨 끝 방, 옆방)
+  room:1..9|last|next (n번째 방, 마지막·맨 끝 방, 옆방). "6번째 방"은 room:6이지 거리 6 m가 아님
   place:<장소>, near:<물체 또는 장소>(옆, 근처. "선반 옆"은 near:shelf이지 옆방이 아님), under:<물체>(밑, 아래)
   "화장실에서 15미터"처럼 장소에서 잰 거리·방향이면 anchor는 "landmark:<장소>"
   장소: entrance 입구, lobby 로비, stairs 계단, elevator 엘리베이터, toilet 화장실, kitchen 주방, office 사무실, classroom 강의실, storage 창고, hall 강당

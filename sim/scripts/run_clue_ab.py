@@ -23,11 +23,24 @@ ap.add_argument("--n_clues", type=int, default=3)
 ap.add_argument("--quality", default="spoken")
 ap.add_argument("--variants", default="A,B")
 ap.add_argument("--p_wrong", type=float, default=0.0)
+ap.add_argument("--parsed", help="parse output jsonl over results/clue/c_sentences.jsonl -> adds condition C")
 ap.add_argument("--workers", type=int, default=16)
 a = ap.parse_args()
 ALL = {"A": dict(beta=0.0), "B": dict(beta=1.0), "A_doc": dict(beta=0.0, score="doc"), "B_doc": dict(beta=1.0, score="doc"),
        "B_mobile": dict(beta=1.0, mobility="unknown")}
-V = {k: ALL[k] for k in a.variants.split(",")}
+ap2 = None
+V = {k: ALL[k] for k in a.variants.split(",") if k in ALL}
+if a.parsed:   # condition C: what the parser made of each clue sentence (unusable -> the clue is dropped)
+    from clue import speech  # noqa: E402
+    rows_p = [json.loads(l) for l in open(a.parsed)]
+    per = {}
+    for r in rows_p:
+        q, seed, k = r["id"].rsplit("_", 2)
+        if q != a.quality:
+            continue
+        c = speech.to_sim(r["pred"], r["sim"]["victim"])
+        per.setdefault(int(seed), []).append(c)
+    V["C"] = dict(beta=1.0, clues={sd: [c for c in cs if c is not None] for sd, cs in per.items()})
 lo, hi = map(int, a.seeds.split(":"))
 kw = dict(n_victims=a.n_victims, n_clues=a.n_clues, quality=a.quality, p_wrong=a.p_wrong)
 
@@ -50,6 +63,10 @@ if __name__ == "__main__":
         for m in ("t_all", "t_clued", "auc", "t_first"):
             mu, l, h = boot([r[k][m] - r[base][m] for r in rows])
             summ[k][f"d_{m}_vs_{base}"] = [round(mu, 3), round(l, 3), round(h, 3)]
+    if "C" in V:
+        cl = [c for cs in V["C"]["clues"].values() for c in cs]
+        summ["C"]["usable_clues"] = len(cl)
+        V["C"]["clues"] = "per seed, from " + a.parsed
     out = dict(args=vars(a), seconds=round(time.time() - t, 1), summary=summ, rows=rows)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(out, indent=1))

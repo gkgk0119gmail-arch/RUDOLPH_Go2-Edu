@@ -146,11 +146,15 @@ _ANG = np.linspace(-np.pi, np.pi, 360, endpoint=False)
 
 class Search:
     def __init__(self, b: Building, a=1.0, beta=0.0, c=1.0, use_clues=None, seed=0, mobility="static",
-                 score="rate", t0=10.0):
+                 score="rate", t0=10.0, clues=None, trust=None, kappa=1.0):
         """score "rate": expected victims behind f / (travel time + t0), expected victims =
              w * sum of clue masses + (victims not covered by a clue + (1 - w) * active clues) * G(f) / sum G,
              w = clip(beta, 0, 1) = trust in the clues (0 = coverage search A, 1 = full trust)
-           score "doc": a * G/maxG + beta * M/maxM - c * C/maxC (plan doc form)."""
+           score "doc": a * G/maxG + beta * M/maxM - c * C/maxC (plan doc form).
+        clues: what the robot understood (default: the building's gold clues); metrics always use the gold ones.
+        trust: {"high"|"mid"|"low": w} per spoken certainty (default: beta for all); kappa: S = E / (C + t0)^kappa."""
+        self.trust, self.kappa = trust, kappa
+        self.clues = b.clues if clues is None else clues
         self.b, self.a, self.beta, self.c, self.score, self.t0 = b, a, beta, c, score, t0
         self.use_clues = beta > 0 if use_clues is None else use_clues
         self.rng = np.random.default_rng([seed, 5])
@@ -170,7 +174,7 @@ class Search:
         self.active, self.fixed = {}, {}
         if self.use_clues:
             self.t += TALK_S
-            for i, c in enumerate(b.clues):
+            for i, c in enumerate(self.clues):
                 self.active[i] = True
                 if not c.get("semantic"):
                     kw = {"half_angle": c["_half_angle"], "dist_rel": c["_dist_rel"]} if "_half_angle" in c else {}
@@ -181,7 +185,7 @@ class Search:
     def prior(self, k):
         if k in self.fixed:
             return self.fixed[k]
-        c = self.b.clues[k]
+        c = self.clues[k]
         side = next(t.split(":")[1] for t in c["semantic"] if t.split(":")[0] in ("side", "turn"))
         n = int(next(t.split(":")[1] for t in c["semantic"] if t.startswith("room:")))
         rooms = sorted((r for r in self.b.rooms if r["side"] == side), key=lambda r: r["ordinal"])
@@ -208,7 +212,12 @@ class Search:
         r_ = B.CERTAINTY_R.get(c.get("certainty") or "high", 0.9)
         return r_ * p / max(p.sum(), 1e-12) + (1 - r_) * ok / ok.sum()
 
+    def weight(self, k):
+        w = self.beta if self.trust is None else self.trust.get(self.clues[k].get("certainty") or "high", self.beta)
+        return min(max(w, 0.0), 1.0)
+
     def beliefs(self):
+        """-> [(trust w_k, normalised belief)] for active clues."""
         ok = (self.known != OCC) * self.nodet
         out = []
         for k, on in self.active.items():
@@ -216,7 +225,7 @@ class Search:
                 b = self.prior(k) * ok
                 s_ = b.sum()
                 if s_ > 1e-12:
-                    out.append(b / s_)
+                    out.append((self.weight(k), b / s_))
         return out
 
     # -- sensing ------------------------------------------------------------------------------------------
@@ -243,7 +252,7 @@ class Search:
             if self.found[i] is None and seen[v] and self.rng.random() < P_SEE:
                 self.found[i] = self.t
                 for k in self.active:
-                    if self.b.clues[k]["victim"] == i:     # oracle match (appearance in reality)
+                    if self.clues[k]["victim"] == i:     # oracle match (appearance in reality)
                         self.active[k] = False
         self.nodet[seen] *= 1 - P_DETECT_MODEL
 
@@ -302,16 +311,18 @@ class Search:
         G = np.bincount(owner[sel], minlength=n).astype(float)
         M = np.zeros(n)
         bl = self.beliefs() if self.active else []
-        for m in bl:
-            M += np.bincount(owner[sel], weights=m[sel], minlength=n)
+        Mw = np.zeros(n)
+        for w_k, m in bl:
+            mk = np.bincount(owner[sel], weights=m[sel], minlength=n)
+            M += mk
+            Mw += w_k * mk
         C = np.array([d[p] for p in tg])
         if self.score == "rate":
-            # each active clue stands for one person: trust w of it sits in the clue map, 1 - w in the open space
-            w = min(max(self.beta, 0.0), 1.0)
+            # each active clue stands for one person: trust w_k of it sits in the clue map, 1 - w_k in the open space
             active = len(bl)
-            rest = max(sum(f is None for f in self.found) - active, 0) + active * (1 - w)
-            E = self.a * rest * G / max(G.sum(), 1e-9) + w * M
-            S = E / (C + self.t0)
+            rest = max(sum(f is None for f in self.found) - active, 0) + sum(1 - w_k for w_k, _ in bl)
+            E = self.a * rest * G / max(G.sum(), 1e-9) + Mw
+            S = E / (C + self.t0) ** self.kappa
         else:
             S = self.a * G / max(G.max(), 1e-9) - self.c * C / max(C.max(), 1e-9)
             if self.beta > 0 and M.max() > 1e-9:
@@ -370,5 +381,6 @@ class Search:
 def run_job(job):
     seed, variants, kw = job
     b = make_building(seed, **kw)
+    variants = {k: ({**v, "clues": v["clues"][seed]} if isinstance(v.get("clues"), dict) else v) for k, v in variants.items()}
     return dict(seed=seed, n_rooms=len(b.rooms), area=float((b.grid == FREE).sum() * CELL ** 2),
                 **{name: Search(b, seed=seed, **v).run() for name, v in variants.items()})

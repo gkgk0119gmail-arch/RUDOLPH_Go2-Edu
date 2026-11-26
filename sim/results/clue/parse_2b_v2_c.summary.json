@@ -1,0 +1,43 @@
+{
+ "all": {
+  "n": 720,
+  "json_ok": 0.9125,
+  "utterance": 0.912,
+  "mobility": 0.794,
+  "anchor": 0.651,
+  "direction_deg": 0.342,
+  "distance_m": 0.835,
+  "distance_qual": 0.354,
+  "floor": 0.906,
+  "floor_rel": 0.907,
+  "semantic": 0.136,
+  "count": 0.803,
+  "count_qual": 0.912,
+  "appearance": 0.894,
+  "certainty": 0.353,
+  "all": 0.0
+ },
+ "medium": {
+  "n": 720,
+  "json_ok": 0.9125,
+  "utterance": 0.912,
+  "mobility": 0.794,
+  "anchor": 0.651,
+  "direction_deg": 0.342,
+  "distance_m": 0.835,
+  "distance_qual": 0.354,
+  "floor": 0.906,
+  "floor_rel": 0.907,
+  "semantic": 0.136,
+  "count": 0.803,
+  "count_qual": 0.912,
+  "appearance": 0.894,
+  "certainty": 0.353,
+  "all": 0.0
+ },
+ "utterance_confusion": {
+  "clue->clue": 657,
+  "clue->None": 63
+ },
+ "latency_s": 2.1
+}

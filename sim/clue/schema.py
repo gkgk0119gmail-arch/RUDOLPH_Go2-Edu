@@ -38,7 +38,7 @@ SEM_KINDS = {
     "corridor": ("inner", "end", "main", "left", "right"),   # 안쪽 / 끝 / 큰 / 왼쪽 / 오른쪽 복도
     "turn": ("left", "right"),                               # 좌회전 / 우회전 (a change of direction)
     "side": ("left", "right"),                               # 복도 왼편 / 오른편에 있는 (which side, no turn)
-    "room": tuple(str(i) for i in range(1, 6)) + ("last", "next"),  # n번째 방 / 마지막 방 / 옆방
+    "room": tuple(str(i) for i in range(1, 10)) + ("last", "next"),  # n번째 방 / 마지막 방 / 옆방
     "place": PLACES,                                         # 지나가거나 도착하는 장소
     "near": OBJECTS + PLACES,                                # ~ 옆 / 근처
     "under": OBJECTS,                                        # ~ 밑
