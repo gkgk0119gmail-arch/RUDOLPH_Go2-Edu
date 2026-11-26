@@ -1,7 +1,23 @@
-# Unitree Go2 EDU Plus — 강화학습 기반 미지 환경 탐사
+# RUDOLPH 🦌
+
+**R**escue **U**nit **D**efying **O**bstacles, guided by **L**anguage & **P**robabilistic **H**ints
+
+장애물에 굴하지 않고, 언어와 확률적 단서를 따라 요구조자를 찾아가는 구조 로봇
+
+**Unitree Go2 EDU Plus — 강화학습 기반 미지 환경 탐사**
 
 Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D435i**를 얹어
 **처음 보는 재난 실내에서 사람을 찾는** 연구 프로젝트입니다. 낮은 틈은 몸을 낮춰 통과하고, 만난 사람의 제보로 탐색 순서를 바꿉니다.
+
+| 글자 | 단어 | 연구와의 연결 |
+|---|---|---|
+| **R** | Rescue | 재난 현장 요구조자 수색 |
+| **U** | Unit | Go2 EDU Plus 4족보행 플랫폼 |
+| **D** | Defying | 낮은 틈·장애물을 몸을 낮춰 통과 (HiPAN 하위 보행·depth 항법) |
+| **O** | Obstacles | 잔해, 낮은 틈, 막힌 길 |
+| **L** | Language | 사람의 제보를 VLM(Qwen3-VL)이 구조화된 단서로 해석 |
+| **P** | Probabilistic | 단서를 요구조자 확률 지도로 바꾸고 관측으로 갱신 |
+| **H** | Hints | "복도 따라가다 왼쪽 세 번째 방에 2명" 같은 제보 |
 
 - **실로봇** (이 문서): 3D SLAM, 학습한 보행 정책 실행. 로봇에 탑재된 **Jetson Orin NX**에서 실행합니다.
 - **시뮬레이션·강화학습**: [sim/README.md](sim/README.md). 학습 PC(RTX 3090, Isaac Lab)에서 실행합니다.
