@@ -15,7 +15,8 @@ Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D43
 
 ### 숙여서 통과하기 (creep): 시뮬레이션 → 실로봇
 
-| 시뮬레이션: depth 항법 student v2 (지도 없음) | 실로봇: 같은 구조의 student가          본 depth와 높이 명령 |
+| 시뮬레이션: depth 항법 student v2 (지도 없음) | 실로봇: 같은 구조의 student가 
+본 depth와 높이 명령 |
 |---|---|
 | <img src="docs/images/sim_nav_student_v2_creep.gif" width="100%"> | <img src="docs/images/real_nav_creep_depth.gif" width="100%"> |
 | 기울어진 판 밑에서 높이 0.19 m로 숙였다가, 지나서 0.30 m로 복귀 (오른쪽 아래: student 입력 depth) | 2026-11-26 실제 실행: 머리 위 장애물을 보고 0.14 m까지 숙였다가 2.5 s에 다시 0.30 m |
