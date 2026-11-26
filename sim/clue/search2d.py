@@ -158,17 +158,18 @@ _ANG = np.linspace(-np.pi, np.pi, 360, endpoint=False)
 
 class Search:
     def __init__(self, b: Building, a=1.0, beta=0.0, c=1.0, use_clues=None, seed=0, mobility="static",
-                 score="rate", t0=10.0, clues=None, trust=None, kappa=1.0, early_exit=True):
+                 score="rate", t0=10.0, clues=None, trust=None, kappa=1.0, early_exit=True, witness=False):
         """score "rate": expected victims behind f / (travel time + t0), expected victims =
              w * sum of clue masses + (victims not covered by a clue + (1 - w) * active clues) * G(f) / sum G,
              w = clip(beta, 0, 1) = trust in the clues (0 = coverage search A, 1 = full trust)
            score "doc": a * G/maxG + beta * M/maxM - c * C/maxC (plan doc form).
         clues: what the robot understood (default: the building's gold clues); metrics always use the gold ones.
         trust: {"high"|"mid"|"low": w} per spoken certainty (default: beta for all); kappa: S = E / (C + t0)^kappa."""
-        self.trust, self.kappa, self.early_exit = trust, kappa, early_exit
-        self.clues = b.clues if clues is None else clues
+        self.trust, self.kappa, self.early_exit, self.witness = trust, kappa, early_exit, witness
+        self.n_witness = 0
+        self.clues = list(b.clues if clues is None else clues)
         self.b, self.a, self.beta, self.c, self.score, self.t0 = b, a, beta, c, score, t0
-        self.use_clues = beta > 0 if use_clues is None else use_clues
+        self.use_clues = (beta > 0 or (trust is not None)) if use_clues is None else use_clues
         self.rng = np.random.default_rng([seed, 5])
         H, W = b.grid.shape
         self.known = np.full((H, W), UNK, np.int8)
@@ -189,7 +190,7 @@ class Search:
         self.post = {}                         # explicit posteriors (used when the belief spreads, D > 0)
         self.active, self.fixed = {}, {}
         if self.use_clues:
-            self.t += TALK_S
+            self.t += TALK_S if self.clues else 0.0
             for i, c in enumerate(self.clues):
                 self.active[i] = True
                 if not c.get("semantic"):
@@ -200,10 +201,46 @@ class Search:
 
     ROOM_W = 5.0 / CELL           # assumed room width before rooms are seen
 
+    def room_of(self, p):
+        for i, r in enumerate(self.b.rooms):
+            y0, y1, x0, x1 = r["box"]
+            if y0 <= p[0] < y1 and x0 <= p[1] < x1:
+                return i
+        return None
+
+    def _witness(self, i):
+        """Victim i was just found; if someone unfound is in a neighbouring room (same side, next ordinal) the found
+        person says "옆방에 한 명 더 있어요" (the robot spends TALK_S listening)."""
+        ri = self.room_of(self.vpos[i])
+        if ri is None:
+            return
+        r = self.b.rooms[ri]
+        nb = [k for k, q in enumerate(self.b.rooms) if q["side"] == r["side"] and abs(q["ordinal"] - r["ordinal"]) == 1]
+        for j, f in enumerate(self.found):
+            if f is None and j != i and self.room_of(self.vpos[j]) in nb and not any(
+                    c["victim"] == j and self.active.get(k) for k, c in enumerate(self.clues)):
+                self.clues.append({"utterance": "clue", "semantic": ["room:next"], "ref_room": ri, "count": 1,
+                                   "certainty": "high", "victim": j})
+                self.active[len(self.clues) - 1] = True
+                self.t += TALK_S
+                self.n_witness += 1
+                return
+
     def prior(self, k):
         if k in self.fixed:
             return self.fixed[k]
         c = self.clues[k]
+        if c.get("semantic") == ["room:next"]:     # rooms next to the speaker's room, same side
+            r = self.b.rooms[c["ref_room"]]
+            H, W = self.known.shape
+            p = np.zeros((H, W))
+            for q in self.b.rooms:
+                if q["side"] == r["side"] and abs(q["ordinal"] - r["ordinal"]) == 1:
+                    y0, y1, x0, x1 = q["box"]
+                    p[y0:y1, x0:x1] = 1.0
+            ok = self.known != OCC
+            p = p * ok
+            return 0.9 * p / max(p.sum(), 1e-12) + 0.1 * ok / ok.sum()
         side = next(t.split(":")[1] for t in c["semantic"] if t.split(":")[0] in ("side", "turn"))
         n = int(next(t.split(":")[1] for t in c["semantic"] if t.startswith("room:")))
         rooms = sorted((r for r in self.b.rooms if r["side"] == side), key=lambda r: r["ordinal"])
@@ -293,6 +330,8 @@ class Search:
                 for k in self.active:
                     if self.clues[k]["victim"] == i:     # oracle match (appearance in reality)
                         self.active[k] = False
+                if self.witness:
+                    self._witness(i)
         self.nodet[seen] *= 1 - P_DETECT_MODEL
         for k in list(self.post):
             m = self.post[k] * (self.known != OCC)
@@ -418,10 +457,11 @@ class Search:
         curve = np.array([sum(x <= t for x in f) for t in ts]) / n
         cov = self.searched.sum() / (self.b.grid == FREE).sum()
         cv = [self.found[c["victim"]] for c in self.b.clues]
+        wit = self.n_witness
         t_clued = max(x if x is not None and x <= LIMIT_S else LIMIT_S for x in cv) if cv else 0.0
         return dict(n_found=len(f), all_found=len(f) == n, t_all=max(f) if len(f) == n else LIMIT_S, t_clued=t_clued,
                     t_first=min(f) if f else LIMIT_S, auc=float(np.trapezoid(curve, ts) / LIMIT_S),
-                    path=self.path, coverage=float(cov), t_end=min(self.t, LIMIT_S), t_mission=t_mission)
+                    path=self.path, coverage=float(cov), t_end=min(self.t, LIMIT_S), t_mission=t_mission, n_witness=wit)
 
 
 def run_job(job):
