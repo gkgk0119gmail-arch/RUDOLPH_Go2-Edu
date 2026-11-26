@@ -37,6 +37,24 @@ Unitree Go2 EDU Plus(Hesai XT16 + RealSense D435i)가 **처음 보는 재난 실
 | 루프 클로저 (Orin NX) | 예정 | 목표: 출발점 복귀 오차 0.3 m 이하 (현재 0.4–0.7 m) |
 | 실로봇 틈 통과 | 예정 | |
 
+## 단서 → JSON 파서 (`clue/`)
+
+사람의 말 → 구조화된 단서(JSON). VLM은 번역만 하고, 확률 지도 생성·갱신은 코드가 한다.
+
+- `clue/schema.py`: 필드
+  - `utterance`: clue / help / other ("살려주세요"는 help: 말한 사람 본인은 이미 발견됨)
+  - `anchor`: reporter / robot / landmark:<장소>
+  - `direction_deg`: 8방향, `distance_m` / `distance_qual`, `floor` / `floor_rel`
+  - `semantic`: 경로 토큰 (복도·회전·n번째/마지막/옆방·장소·근처·밑)
+  - `count` / `count_qual`, `appearance` (나이·성별·상의 색), `certainty` (high / mid / low)
+  - 난이도: 정보 개수 ≤ 2 쉬움, 3–4 보통, 5 이상 어려움
+- `clue/gen.py`: 라벨을 먼저 뽑고 틀로 문장 생성 (배선 확인용)
+- `results/clue/pilot_llm_v1.jsonl`: 라벨 → LLM(Claude)이 비정형 구어로 쓴 문장 150개
+  - 쉬움 36 / 보통 54 / 어려움 42 / 단서 아님 18 (구조 요청 10, 무관 8)
+  - 말 더듬기, 자기 정정, 사투리, 구조 요청 + 단서가 섞인 말 포함
+  - 파서(Qwen)와 다른 모델이 썼다. 실제 사람 말은 아직 없음
+- `clue/parse.py`: Qwen3-VL-8B 프롬프트 파서와 필드별 정확도 (전체 / 난이도별, utterance 혼동표)
+
 ## 0. HiPAN 하위 보행 teacher
 
 **최종 (teacher_ft2 model_9998, 평지 0.4 m/s 명령, roll 0)**

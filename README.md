@@ -29,6 +29,7 @@ Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D43
 | 논문 정독 | 🔄 진행 중 | [docs/papers](docs/papers/README.md), HiPAN 완료 |
 | HiPAN식 상위 항법 teacher (특권 지도 + PGCL) | ✅ v1·v2 완료 | 처음 보는 지도 도착 82–83 %, v2는 트인 곳에서 다시 일어섬 ([설계·결과](docs/hipan_nav_design.md)) |
 | HiPAN식 상위 항법 student (depth + GRU) | ✅ v1 완료, v2 증류 중 | **지도 없이 depth만으로 도착 82 %** (teacher와 같음) |
+| 단서 → JSON (VLM 파서, 계획 문서 6단계) | 🔄 진행 중 | 스키마·합성 문장 150개(LLM 작성, 쉬움~어려움 + 구조요청·무관한 말)·평가 도구 (`sim/clue/`) |
 | 목표점 선택 (3D 지도 커버리지 + 텍스트, 가중치 학습) | ⬜ 예정 | 지금은 목표점 무작위 |
 | 실로봇 틈 통과 | ⬜ 예정 | |
 
