@@ -47,3 +47,9 @@ def test_pilot_labels_valid():
         r = json.loads(l)
         c, bad = S.normalize(r["gold"])
         assert not bad and c == r["gold"], r["id"]
+
+
+def test_qualifier_dropped_when_number_given():
+    out, bad = S.normalize({"utterance": "clue", "count": 3, "count_qual": "several", "distance_m": 5, "distance_qual": "near"})
+    assert out["count"] == 3 and out["count_qual"] is None
+    assert out["distance_m"] == 5 and out["distance_qual"] is None

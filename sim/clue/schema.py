@@ -112,6 +112,11 @@ def normalize(d: dict | None) -> tuple[dict | None, list[str]]:
                 out["appearance"][k] = ap[k]
             elif ap.get(k) is not None:
                 bad.append(f"appearance.{k} {ap[k]!r}")
+    # schema rules the model often breaks: a qualifier only when no number was said
+    for num, qual in (("count", "count_qual"), ("distance_m", "distance_qual")):
+        if out[num] is not None and out[qual] is not None:
+            out[qual] = None
+            bad.append(f"{qual} dropped (number given)")
     return out, bad
 
 
