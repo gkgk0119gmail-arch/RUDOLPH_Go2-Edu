@@ -43,11 +43,14 @@ class Building:
     facing: float             # reporter heading [rad, map: 0 = +col, CCW positive with row up]
     victims: list
     clues: list               # dicts in schema form + "victim" index (oracle match on detection)
-    rooms: list = field(default_factory=list)
+    rooms: list = field(default_factory=list)   # dict(box=(y0, y1, x0, x1), side="left"|"right", ordinal, door=[(y, x)])
+    side_rows: dict = field(default_factory=dict)  # side -> (y0, y1); left / right as seen walking east from the lobby
+    corr_x0: int = 0          # first corridor column after the lobby
 
 
 def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str = "spoken", p_wrong: float = 0.0) -> Building:
     """quality "spoken": direction to 45 deg, distance x U(0.85, 1.15) rounded to 5 m (how people talk)
+               "semantic": "corridor, left / right, n-th room" for victims in rooms (others fall back to spoken)
                "exact":  true bearing and distance, narrow distribution (upper bound for geometric clues)
     p_wrong: each clue is wrong with this probability (left/right swapped, or distance x2, or x0.5), said just as
              confidently -- the robot is not told which ones."""
@@ -68,13 +71,14 @@ def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str 
     g[1:H - 1, 1:lobby_w + 1] = FREE         # lobby, full height
     rooms = []
 
-    def row_of_rooms(ws, y0, y1, door_row):
+    def row_of_rooms(ws, y0, y1, door_row, side):
         x = lobby_w + 2
         prev = None
-        for w in ws:
+        for o, w in enumerate(ws):
             g[y0:y1, x:x + w] = FREE
             d = x + int(rng.integers(1, max(2, w - m(1.0))))
             g[door_row, d:d + m(1.0)] = FREE                     # door to the corridor
+            door = [(door_row, xx) for xx in range(d, d + m(1.0))]
             if prev is not None and rng.random() < 0.3:          # door to the previous room
                 yy = int(rng.integers(y0 + 1, y1 - m(1.0)))
                 g[yy:yy + m(1.0), x - 1] = FREE
@@ -82,12 +86,12 @@ def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str 
                 fh, fw = m(rng.uniform(0.6, 1.2)), m(rng.uniform(0.6, 1.6))
                 fy, fx = int(rng.integers(y0 + 2, max(y0 + 3, y1 - fh - 2))), int(rng.integers(x + 2, max(x + 3, x + w - fw - 2)))
                 g[fy:fy + fh, fx:fx + fw] = OCC
-            rooms.append((y0, y1, x, x + w))
+            rooms.append(dict(box=(y0, y1, x, x + w), side=side, ordinal=o + 1, door=door))
             prev = (y0, y1, x, x + w)
             x += w + 1
 
-    row_of_rooms(widths[:n_side], 1, y_c0 - 1, y_c0 - 1)
-    row_of_rooms(widths[n_side:], y_c0 + corr + 1, H - 1, y_c0 + corr)
+    row_of_rooms(widths[:n_side], 1, y_c0 - 1, y_c0 - 1, "left")            # north = left walking east
+    row_of_rooms(widths[n_side:], y_c0 + corr + 1, H - 1, y_c0 + corr, "right")
     g[y_c0:y_c0 + corr, lobby_w] = FREE                          # lobby opens to the corridor
     start = (y_c0 + corr // 2, m(1.5))
     # only cells reachable from the start count
@@ -98,7 +102,7 @@ def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str 
     victims = []
     while len(victims) < n_victims:
         if rng.random() < 0.8:
-            y0, y1, x0, x1 = rooms[int(rng.integers(len(rooms)))]
+            y0, y1, x0, x1 = rooms[int(rng.integers(len(rooms)))]["box"]
             p = (int(rng.integers(y0 + 1, y1 - 1)), int(rng.integers(x0 + 1, x1 - 1)))
         else:
             p = tuple(free[int(rng.integers(len(free)))])
@@ -111,6 +115,15 @@ def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str 
         dy, dx = -(v[0] - start[0]) * CELL, (v[1] - start[1]) * CELL
         bearing = math.degrees(facing - math.atan2(dy, dx)) % 360   # clockwise from facing
         dist = math.hypot(dx, dy) * rng.uniform(0.85, 1.15)
+        room = next((r for r in rooms if r["box"][0] <= v[0] < r["box"][1] and r["box"][2] <= v[1] < r["box"][3]), None)
+        if quality == "semantic" and room is not None:
+            # "복도 따라가다 왼쪽 세 번째 방": counted from the lobby end, sides as seen walking east
+            c = {"semantic": ["corridor:main", f"turn:{room['side']}", f"room:{room['ordinal']}"]}
+            if rng.random() < p_wrong:
+                c["semantic"][1] = "turn:" + ("right" if room["side"] == "left" else "left")
+                c["wrong"] = "mirror"
+            clues.append({"utterance": "clue", "certainty": "high", "count": 1, "victim": int(k), "wrong": c.pop("wrong", None), **c})
+            continue
         if quality == "exact":
             c = {"direction_deg": bearing, "distance_m": math.hypot(dx, dy), "_half_angle": math.radians(3), "_dist_rel": 0.05}
         else:
@@ -124,7 +137,8 @@ def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str 
                 c["distance_m"] = float(max(5, round(c["distance_m"] * (2.0 if wrong == "far" else 0.5) / 5) * 5))
         clues.append({"utterance": "clue", "anchor": "reporter", "certainty": "high", "count": 1, "victim": int(k),
                       "wrong": wrong, **c})
-    return Building(g, start, facing, victims, clues, rooms)
+    return Building(g, start, facing, victims, clues, rooms,
+                    {"left": (1, y_c0 - 1), "right": (y_c0 + corr + 1, H - 1)}, lobby_w + 2)
 
 
 _ANG = np.linspace(-np.pi, np.pi, 360, endpoint=False)
@@ -150,12 +164,60 @@ class Search:
         k = np.arange(1, 2 * n + 1) * 0.5
         self.dy, self.dx = np.sin(_ANG)[:, None] * k, np.cos(_ANG)[:, None] * k
         self.rk = k * CELL
-        self.maps = {}
+        # belief of clue k = prior_k(current map) x P(no detection so far) over passable cells, normalised.
+        # Keeping the miss likelihood separate lets the prior change when room labels appear without losing looks.
+        self.nodet = np.ones((H, W))
+        self.active, self.fixed = {}, {}
         if self.use_clues:
             self.t += TALK_S
             for i, c in enumerate(b.clues):
-                kw = {"half_angle": c["_half_angle"], "dist_rel": c["_dist_rel"]} if "_half_angle" in c else {}
-                self.maps[i] = B.clue_prior(np.zeros((H, W), np.int8), CELL, b.start, b.facing, c, **kw)
+                self.active[i] = True
+                if not c.get("semantic"):
+                    kw = {"half_angle": c["_half_angle"], "dist_rel": c["_dist_rel"]} if "_half_angle" in c else {}
+                    self.fixed[i] = B.clue_prior(np.zeros((H, W), np.int8), CELL, b.start, b.facing, c, **kw)
+
+    ROOM_W = 5.0 / CELL           # assumed room width before rooms are seen
+
+    def prior(self, k):
+        if k in self.fixed:
+            return self.fixed[k]
+        c = self.b.clues[k]
+        side = c["semantic"][1].split(":")[1]
+        n = int(c["semantic"][2].split(":")[1])
+        rooms = sorted((r for r in self.b.rooms if r["side"] == side), key=lambda r: r["ordinal"])
+        labelled = [all(self.known[q] == FREE for q in r["door"]) for r in rooms]
+        j = 0                                    # rooms counted so far from the lobby end (door seen, none skipped)
+        while j < len(rooms) and labelled[j]:
+            j += 1
+        H, W = self.known.shape
+        p = np.zeros((H, W))
+        if n <= j:                               # the n-th room is identified: its inside
+            y0, y1, x0, x1 = rooms[n - 1]["box"]
+            p[y0:y1, x0:x1] = 1.0
+        else:                                    # not yet: expected place along that side, wider the further away
+            x_ref = rooms[j - 1]["box"][3] if j else self.b.corr_x0
+            mu, sd = x_ref + (n - j - 0.5) * self.ROOM_W, 0.35 * (n - j) * self.ROOM_W
+            y0, y1 = self.b.side_rows[side]
+            xs = np.arange(W)
+            p[y0:y1, :] = np.exp(-0.5 * ((xs - mu) / sd) ** 2)[None, :]
+            for r in rooms[:j]:                  # counted rooms are not the n-th
+                a0, a1, b0, b1 = r["box"]
+                p[a0:a1, b0:b1] = 0
+        ok = self.known != OCC
+        p = p * ok
+        r_ = B.CERTAINTY_R.get(c.get("certainty") or "high", 0.9)
+        return r_ * p / max(p.sum(), 1e-12) + (1 - r_) * ok / ok.sum()
+
+    def beliefs(self):
+        ok = (self.known != OCC) * self.nodet
+        out = []
+        for k, on in self.active.items():
+            if on:
+                b = self.prior(k) * ok
+                s_ = b.sum()
+                if s_ > 1e-12:
+                    out.append(b / s_)
+        return out
 
     # -- sensing ------------------------------------------------------------------------------------------
     def _rays(self):
@@ -180,15 +242,10 @@ class Search:
         for i, v in enumerate(self.b.victims):
             if self.found[i] is None and seen[v] and self.rng.random() < P_SEE:
                 self.found[i] = self.t
-                for k, c in list(self.maps.items()):
-                    if c is not None and self.b.clues[k]["victim"] == i:    # oracle match (appearance in reality)
-                        self.maps[k] = None
-        for k, m in self.maps.items():
-            if m is not None:
-                m[self.known == OCC] = 0
-                m[seen] *= 1 - P_DETECT_MODEL
-                s_ = m.sum()
-                self.maps[k] = m / s_ if s_ > 1e-12 else None
+                for k in self.active:
+                    if self.b.clues[k]["victim"] == i:     # oracle match (appearance in reality)
+                        self.active[k] = False
+        self.nodet[seen] *= 1 - P_DETECT_MODEL
 
     # -- planning ------------------------------------------------------------------------------------------
     def plan(self):
@@ -244,14 +301,14 @@ class Search:
         sel = (owner >= 0) & open_
         G = np.bincount(owner[sel], minlength=n).astype(float)
         M = np.zeros(n)
-        for m in self.maps.values():
-            if m is not None:
-                M += np.bincount(owner[sel], weights=m[sel], minlength=n)
+        bl = self.beliefs() if self.active else []
+        for m in bl:
+            M += np.bincount(owner[sel], weights=m[sel], minlength=n)
         C = np.array([d[p] for p in tg])
         if self.score == "rate":
             # each active clue stands for one person: trust w of it sits in the clue map, 1 - w in the open space
             w = min(max(self.beta, 0.0), 1.0)
-            active = sum(m is not None for m in self.maps.values())
+            active = len(bl)
             rest = max(sum(f is None for f in self.found) - active, 0) + active * (1 - w)
             E = self.a * rest * G / max(G.sum(), 1e-9) + w * M
             S = E / (C + self.t0)
@@ -303,7 +360,9 @@ class Search:
         ts = np.linspace(0, LIMIT_S, 181)
         curve = np.array([sum(x <= t for x in f) for t in ts]) / n
         cov = self.searched.sum() / (self.b.grid == FREE).sum()
-        return dict(n_found=len(f), all_found=len(f) == n, t_all=max(f) if len(f) == n else LIMIT_S,
+        cv = [self.found[c["victim"]] for c in self.b.clues]
+        t_clued = max(x if x is not None and x <= LIMIT_S else LIMIT_S for x in cv) if cv else 0.0
+        return dict(n_found=len(f), all_found=len(f) == n, t_all=max(f) if len(f) == n else LIMIT_S, t_clued=t_clued,
                     t_first=min(f) if f else LIMIT_S, auc=float(np.trapezoid(curve, ts) / LIMIT_S),
                     path=self.path, coverage=float(cov), t_end=min(self.t, LIMIT_S))
 

@@ -44,10 +44,10 @@ if __name__ == "__main__":
         rows = p.map(S.run_job, [(s, V, kw) for s in range(lo, hi)])
     summ = {}
     for k in V:
-        summ[k] = {m: round(float(np.mean([r[k][m] for r in rows])), 3) for m in ("t_all", "t_first", "auc", "n_found", "all_found", "path", "coverage")}
+        summ[k] = {m: round(float(np.mean([r[k][m] for r in rows])), 3) for m in ("t_all", "t_clued", "t_first", "auc", "n_found", "all_found", "path", "coverage")}
     base = list(V)[0]
     for k in list(V)[1:]:
-        for m in ("t_all", "auc", "t_first"):
+        for m in ("t_all", "t_clued", "auc", "t_first"):
             mu, l, h = boot([r[k][m] - r[base][m] for r in rows])
             summ[k][f"d_{m}_vs_{base}"] = [round(mu, 3), round(l, 3), round(h, 3)]
     out = dict(args=vars(a), seconds=round(time.time() - t, 1), summary=summ, rows=rows)
