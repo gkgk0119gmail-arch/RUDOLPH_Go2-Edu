@@ -146,14 +146,14 @@ _ANG = np.linspace(-np.pi, np.pi, 360, endpoint=False)
 
 class Search:
     def __init__(self, b: Building, a=1.0, beta=0.0, c=1.0, use_clues=None, seed=0, mobility="static",
-                 score="rate", t0=10.0, clues=None, trust=None, kappa=1.0):
+                 score="rate", t0=10.0, clues=None, trust=None, kappa=1.0, early_exit=True):
         """score "rate": expected victims behind f / (travel time + t0), expected victims =
              w * sum of clue masses + (victims not covered by a clue + (1 - w) * active clues) * G(f) / sum G,
              w = clip(beta, 0, 1) = trust in the clues (0 = coverage search A, 1 = full trust)
            score "doc": a * G/maxG + beta * M/maxM - c * C/maxC (plan doc form).
         clues: what the robot understood (default: the building's gold clues); metrics always use the gold ones.
         trust: {"high"|"mid"|"low": w} per spoken certainty (default: beta for all); kappa: S = E / (C + t0)^kappa."""
-        self.trust, self.kappa = trust, kappa
+        self.trust, self.kappa, self.early_exit = trust, kappa, early_exit
         self.clues = b.clues if clues is None else clues
         self.b, self.a, self.beta, self.c, self.score, self.t0 = b, a, beta, c, score, t0
         self.use_clues = beta > 0 if use_clues is None else use_clues
@@ -354,7 +354,7 @@ class Search:
     def run(self):
         self.sense(spin=True)
         for _ in range(600):
-            if all(f is not None for f in self.found) or self.t > LIMIT_S:
+            if (self.early_exit and all(f is not None for f in self.found)) or self.t > LIMIT_S:
                 break
             d, pred = self.plan()
             tgt = self.choose(d)
@@ -366,6 +366,8 @@ class Search:
                 self.searched[self.pos] = True
                 continue
             self.go(tgt, d, pred)
+        d_home, _ = self.plan()
+        t_mission = min(self.t, LIMIT_S) + float(d_home[self.b.start]) if np.isfinite(d_home[self.b.start]) else 2 * LIMIT_S
         f = [x for x in self.found if x is not None and x <= LIMIT_S]
         n = len(self.b.victims)
         ts = np.linspace(0, LIMIT_S, 181)
@@ -375,7 +377,7 @@ class Search:
         t_clued = max(x if x is not None and x <= LIMIT_S else LIMIT_S for x in cv) if cv else 0.0
         return dict(n_found=len(f), all_found=len(f) == n, t_all=max(f) if len(f) == n else LIMIT_S, t_clued=t_clued,
                     t_first=min(f) if f else LIMIT_S, auc=float(np.trapezoid(curve, ts) / LIMIT_S),
-                    path=self.path, coverage=float(cov), t_end=min(self.t, LIMIT_S))
+                    path=self.path, coverage=float(cov), t_end=min(self.t, LIMIT_S), t_mission=t_mission)
 
 
 def run_job(job):

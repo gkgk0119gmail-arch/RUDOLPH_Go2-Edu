@@ -27,7 +27,8 @@ ap.add_argument("--parsed", help="parse output jsonl over results/clue/c_sentenc
 ap.add_argument("--workers", type=int, default=16)
 a = ap.parse_args()
 ALL = {"A": dict(beta=0.0), "B": dict(beta=1.0), "A_doc": dict(beta=0.0, score="doc"), "B_doc": dict(beta=1.0, score="doc"),
-       "B_mobile": dict(beta=1.0, mobility="unknown")}
+       "B_mobile": dict(beta=1.0, mobility="unknown"),
+       "A_noexit": dict(beta=0.0, early_exit=False), "B_noexit": dict(beta=1.0, early_exit=False)}
 ap2 = None
 V = {k: ALL[k] for k in a.variants.split(",") if k in ALL}
 if a.parsed:   # condition C: what the parser made of each clue sentence (unusable -> the clue is dropped)
@@ -57,10 +58,10 @@ if __name__ == "__main__":
         rows = p.map(S.run_job, [(s, V, kw) for s in range(lo, hi)])
     summ = {}
     for k in V:
-        summ[k] = {m: round(float(np.mean([r[k][m] for r in rows])), 3) for m in ("t_all", "t_clued", "t_first", "auc", "n_found", "all_found", "path", "coverage")}
+        summ[k] = {m: round(float(np.mean([r[k][m] for r in rows])), 3) for m in ("t_all", "t_clued", "t_first", "auc", "n_found", "all_found", "path", "coverage", "t_mission")}
     base = list(V)[0]
     for k in list(V)[1:]:
-        for m in ("t_all", "t_clued", "auc", "t_first"):
+        for m in ("t_all", "t_clued", "auc", "t_first", "t_mission"):
             mu, l, h = boot([r[k][m] - r[base][m] for r in rows])
             summ[k][f"d_{m}_vs_{base}"] = [round(mu, 3), round(l, 3), round(h, 3)]
     if "C" in V:
