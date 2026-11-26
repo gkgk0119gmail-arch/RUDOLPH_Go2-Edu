@@ -1,0 +1,26 @@
+{
+ "open (no overhang around)": {
+  "share": 0.71,
+  "cmd_h": 0.301,
+  "act_h": 0.305,
+  "low_share": 0.091
+ },
+ "overhang ahead (approach)": {
+  "share": 0.165,
+  "cmd_h": 0.298,
+  "act_h": 0.303,
+  "low_share": 0.083
+ },
+ "under overhang": {
+  "share": 0.086,
+  "cmd_h": 0.234,
+  "act_h": 0.241,
+  "low_share": 0.57
+ },
+ "just passed (overhang behind only)": {
+  "share": 0.039,
+  "cmd_h": 0.293,
+  "act_h": 0.299,
+  "low_share": 0.118
+ }
+}

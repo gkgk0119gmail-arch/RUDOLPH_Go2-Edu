@@ -72,7 +72,11 @@ with launch_simulation(cfg, args):
         hist = History(n, dev, d=ck["obs_dim"])
 
         def policy(o):  # noqa: F811
-            return net(hist.push(o["student"]))[0]
+            so = o["student"]
+            if ck.get("no_contact", False):
+                so = so.clone()
+                so[:, 36:40] = 0.0
+            return net(hist.push(so))[0]
     idx = torch.arange(n, device=dev)
     hc = torch.tensor(HEIGHTS, device=dev)[(idx // args.per) % len(HEIGHTS)]
     rc = torch.tensor(ROLLS, device=dev)[idx // (args.per * len(HEIGHTS))]

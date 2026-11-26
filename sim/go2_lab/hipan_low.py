@@ -234,6 +234,25 @@ def feet_air_time_moving(env, command_name, sensor_cfg: SceneEntityCfg, threshol
     return ((air - threshold) * first).sum(1) * moving.float()
 
 
+def feet_air_time_pos(env, command_name, sensor_cfg: SceneEntityCfg, threshold: float, cap: float = 0.3):
+    """Positive-only air-time reward at touchdown, clip(air - threshold, 0, cap), while moving / turning. (The signed
+    version with 0.25 s punished every step of this policy's short stride and the fine-tune drifted to easier terrain.)"""
+    cs = env.scene.sensors[sensor_cfg.name]
+    first = _t(cs.compute_first_contact(env.step_dt))[:, sensor_cfg.body_ids].float()
+    air = _t(cs.data.last_air_time)[:, sensor_cfg.body_ids]
+    cmd = env.command_manager.get_command(command_name)
+    moving = (cmd[:, :2].norm(dim=1) > 0.1) | (cmd[:, 2].abs() > 0.2)
+    return ((air - threshold).clamp(0.0, cap) * first).sum(1) * moving.float()
+
+
+def stand_still_motion(env, command_name, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
+    """Joint speed (sum dq^2) while the velocity command is zero: the real robot swayed and shuffled standing still."""
+    cmd = env.command_manager.get_command(command_name)
+    still = (cmd[:, :2].norm(dim=1) < 0.05) & (cmd[:, 2].abs() < 0.05)
+    dq = env.scene[asset_cfg.name].data.joint_vel.torch
+    return dq.square().sum(1) * still.float()
+
+
 def feet_slide_l1(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg):
     """Gait term: horizontal speed of feet that are in contact (dragging the feet instead of stepping)."""
     f = _t(env.scene.sensors[sensor_cfg.name].data.net_forces_w_history)[:, :, sensor_cfg.body_ids].norm(dim=-1)
@@ -448,6 +467,35 @@ class HipanLowGaitEnvCfg(HipanLowFTEnvCfg):
         # reward at 70 % tracking. A narrower kernel makes the last 30 % worth it.
         self.rewards.track_vel.params["scale"] = 0.1
         self.rewards.track_yaw.params["scale"] = 0.1
+
+
+@configclass
+class HipanLowV3EnvCfg(HipanLowFTEnvCfg):
+    """Real-robot fixes, fine-tuned from teacher_ft2 (2026-11-26 real test: feet dragged when turning / side-stepping,
+    swayed standing still, 0.7x speed; the gait fine-tune with a signed air-time term lost terrain levels).
+    The student is distilled WITHOUT foot contacts (real foot_force zero drifts; scripts/distill_hipan_low.py --no_contact)."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        # fine-tune from a converged teacher: full command ranges from the start (the grid curriculum restarted at
+        # level 0 in every fine-tune)
+        self.curriculum.command_levels = None
+        v = self.commands.base_velocity
+        v.ranges.lin_vel_x, v.ranges.lin_vel_y, v.ranges.ang_vel_z = (-1.5, 1.5), (-1.0, 1.0), (-1.5, 1.5)
+        v.rel_standing_envs = 0.2
+        self.commands.base_roll.start = self.commands.base_roll.full
+        feet_s = SceneEntityCfg("contact_forces", body_names=FEET)
+        self.rewards.feet_air_time = RewTerm(func=feet_air_time_pos, weight=0.5, params={
+            "command_name": "base_velocity", "threshold": 0.12, "sensor_cfg": feet_s})  # 0.2 s: never reached, no signal
+        self.rewards.feet_slide = RewTerm(func=feet_slide_l1, weight=-0.2, params={
+            "sensor_cfg": feet_s, "asset_cfg": SceneEntityCfg("robot", body_names=FEET)})
+        self.rewards.stand_still = RewTerm(func=stand_still_motion, weight=-0.005, params={
+            "command_name": "base_velocity"})
+        self.rewards.track_vel.params["scale"] = 0.15
+        self.rewards.track_yaw.params["scale"] = 0.15
+        # actuator randomization: real thigh torques exceeded the sim saturation; PD gain scale +-25 % (was +-10 %)
+        self.events.motor.params["stiffness_distribution_params"] = (0.75, 1.25)
+        self.events.motor.params["damping_distribution_params"] = (0.75, 1.25)
 
 
 @configclass

@@ -15,6 +15,7 @@ _TASKS = {
     "Go2-HiPAN-Low": ("hipan_low:HipanLowEnvCfg", "hipan_low:HipanLowPPORunnerCfg"),
     "Go2-HiPAN-Low-FT": ("hipan_low:HipanLowFTEnvCfg", "hipan_low:HipanLowPPORunnerCfg"),
     "Go2-HiPAN-Low-Gait": ("hipan_low:HipanLowGaitEnvCfg", "hipan_low:HipanLowPPORunnerCfg"),
+    "Go2-HiPAN-Low-V3": ("hipan_low:HipanLowV3EnvCfg", "hipan_low:HipanLowPPORunnerCfg"),
     "Go2-HiPAN-Low-Play": ("hipan_low:HipanLowEnvCfg_PLAY", "hipan_low:HipanLowPPORunnerCfg"),
     "Go2-HiPAN-Nav": ("hipan_nav:HipanNavEnvCfg", "hipan_nav:HipanNavPPORunnerCfg"),
     "Go2-HiPAN-Nav-Depth": ("hipan_nav:HipanNavEnvCfg_DEPTH", "hipan_nav:HipanNavPPORunnerCfg"),

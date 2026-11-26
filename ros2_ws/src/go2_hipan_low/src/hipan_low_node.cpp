@@ -153,7 +153,9 @@ class HipanLowNode : public rclcpp::Node {
     weights_ = declare_parameter<std::string>("weights", "");
     live_ = declare_parameter<std::string>("mode", "shadow") == "live";
     cmd_topic_ = declare_parameter<std::string>("cmd_source", "remote") == "topic";
-    contact_thr_ = declare_parameter<double>("contact_thr", 20.0);
+    contact_thr_ = declare_parameter<double>("contact_thr", 20.0);  // until calibrated
+    contact_margin_ = declare_parameter<double>("contact_margin", 5.0);  // per-foot threshold = lying baseline + margin
+    thr_.fill(contact_thr_);
     h_default_ = declare_parameter<double>("h_default", 0.30);
     ramp_s_ = declare_parameter<double>("ramp_s", 3.0);
     stand_kp_ = declare_parameter<double>("stand_kp", 50.0);  // RAMP/HOLD gains (stand up from lying, Unitree example)
@@ -195,7 +197,7 @@ class HipanLowNode : public rclcpp::Node {
           topic_cmd_time_ = now_s();
         });
     if (live_) pub_ = create_publisher<unitree_go::msg::LowCmd>("/lowcmd", 10);
-    // 50 Hz debug for sim-to-real checks: [state, cmd(5), est(5: vx vy vz h roll), roll, pitch, yaw, contact(4)]
+    // 50 Hz debug: [state, cmd(5), est(5: vx vy vz h roll), roll, pitch, yaw, contact(4), obs(62)]
     dbg_pub_ = create_publisher<std_msgs::msg::Float32MultiArray>("/hipan/debug", 10);
 
     char fn[256];
@@ -272,7 +274,7 @@ class HipanLowNode : public rclcpp::Node {
     }
     for (int k = 0; k < 4; ++k) {
       raw[k] = ls.foot_force[hipan::kFootSdkToPolicy[k]];
-      contact[k] = raw[k] > contact_thr_ ? 1.f : 0.f;
+      contact[k] = raw[k] > thr_[k] ? 1.f : 0.f;
     }
     hipan::roll_pitch(ls.imu_state.quaternion[0], ls.imu_state.quaternion[1], ls.imu_state.quaternion[2],
                       ls.imu_state.quaternion[3], roll, pitch);
@@ -280,11 +282,17 @@ class HipanLowNode : public rclcpp::Node {
     Remote rc = Remote::parse(ls.wireless_remote);
 
     // ---- command
-    if (cmd_topic_) {
+    auto dz = [](float v) { return std::abs(v) < 0.1f ? 0.f : v; };
+    const bool sticks = std::abs(rc.lx) > 0.2f || std::abs(rc.ly) > 0.2f || std::abs(rc.rx) > 0.2f;
+    if (cmd_topic_ && !sticks) {  // high-level commands; any stick movement takes over (manual override)
       if (tcmd_age < 0.5) cmd_ = tcmd;
       else cmd_ = {0, 0, 0, (float)h_default_, 0};
+      manual_ = false;
     } else {
-      auto dz = [](float v) { return std::abs(v) < 0.1f ? 0.f : v; };
+      if (cmd_topic_ && !manual_) {
+        manual_ = true;
+        RCLCPP_WARN(get_logger(), "manual override (stick moved): /hipan/cmd ignored while the sticks are used");
+      }
       cmd_[0] = dz(rc.ly) * vmax_[0];
       cmd_[1] = -dz(rc.lx) * vmax_[1];
       cmd_[2] = -dz(rc.rx) * vmax_[2];
@@ -324,6 +332,15 @@ class HipanLowNode : public rclcpp::Node {
             break;
           }
       }
+    }
+    if (calib_n_ >= 0 && live_ && state_ == RAMP && after_ramp_ == HOLD && t - ramp_t0_ < 0.4) {
+      for (int k = 0; k < 4; ++k) calib_sum_[k] += raw[k];  // lying, feet unloaded
+      ++calib_n_;
+    } else if (calib_n_ > 5) {
+      for (int k = 0; k < 4; ++k) thr_[k] = std::max<float>(calib_sum_[k] / calib_n_ + contact_margin_, 8.f);
+      RCLCPP_INFO(get_logger(), "foot contact thresholds (unloaded baseline + %.0f): FL %.1f FR %.1f RL %.1f RR %.1f",
+                  contact_margin_, thr_[0], thr_[1], thr_[2], thr_[3]);
+      calib_n_ = -1;
     }
     if (state_ == RAMP && t - ramp_t0_ >= ramp_dur_ && sit_phase2_) {
       sit_phase2_ = false;
@@ -444,7 +461,7 @@ class HipanLowNode : public rclcpp::Node {
 
     {
       std_msgs::msg::Float32MultiArray dm;
-      dm.data.reserve(19);
+      dm.data.reserve(81);
       dm.data.push_back(state_);
       for (int i = 0; i < 5; ++i) dm.data.push_back(cmd_[i]);
       for (int i = 0; i < 5; ++i) dm.data.push_back(est[i]);
@@ -452,6 +469,7 @@ class HipanLowNode : public rclcpp::Node {
       dm.data.push_back(pitch);
       dm.data.push_back(ls.imu_state.rpy[2]);
       for (int i = 0; i < 4; ++i) dm.data.push_back(contact[i]);
+      for (int i = 0; i < 62; ++i) dm.data.push_back(obs[i]);  // low student observation (for the nav student)
       dbg_pub_->publish(dm);
     }
 
@@ -540,6 +558,10 @@ class HipanLowNode : public rclcpp::Node {
   double ramp_dur_ = 1.0;
   State after_ramp_ = HOLD;
   bool sit_phase2_ = false;
+  bool manual_ = false;
+  std::array<float, 4> thr_{}, calib_sum_{};
+  int calib_n_ = 0;
+  double contact_margin_ = 5.0;
   State state_ = WAIT;
   double ramp_t0_ = 0, policy_t0_ = 0, max_dt_ = 0;
   long n_ = 0;

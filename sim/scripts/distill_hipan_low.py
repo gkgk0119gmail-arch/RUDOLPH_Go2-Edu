@@ -31,17 +31,22 @@ ap.add_argument("--beta_iters", type=int, default=100, help="teacher share of th
 ap.add_argument("--delay_max", type=int, default=8, help="max control delay in 5 ms physics steps")
 ap.add_argument("--save_every", type=int, default=250)
 ap.add_argument("--seed", type=int, default=1)
+ap.add_argument("--task", default="Go2-HiPAN-Low", help="env of the teacher (e.g. Go2-HiPAN-Low-V3 for its randomization)")
+ap.add_argument("--no_contact", action="store_true",
+                help="zero the 4 foot-contact entries (36:40) of the student input: the real foot_force zero drifts")
 add_launcher_args(ap)
 args = ap.parse_args()
 sys.argv = sys.argv[:1]
 
-cfg, agent = resolve_task_config("Go2-HiPAN-Low", "rsl_rl_cfg_entry_point")
+cfg, agent = resolve_task_config(args.task, "rsl_rl_cfg_entry_point")
 cfg.scene.num_envs, cfg.seed = args.envs, args.seed
 # the teacher finished its command curriculum (level 1.0): train on the full ranges, penalties do not matter here
 v = cfg.commands.base_velocity.ranges
 v.lin_vel_x, v.lin_vel_y, v.ang_vel_z = (-1.5, 1.5), (-1.0, 1.0), (-1.5, 1.5)
 cfg.commands.base_roll.start = cfg.commands.base_roll.full
-cfg.curriculum.command_levels = cfg.curriculum.penalty_scale = None
+if getattr(cfg.curriculum, "command_levels", None) is not None:
+    cfg.curriculum.command_levels = None
+cfg.curriculum.penalty_scale = None
 if args.delay_max > 0:
     from go2_lab.crouch import delayed_action
 
@@ -56,7 +61,7 @@ with launch_simulation(cfg, args):
     from go2_lab.hipan_student import EST, H, HipanStudent, History
 
     torch.manual_seed(args.seed)
-    env = gym.make("Go2-HiPAN-Low", cfg=cfg)
+    env = gym.make(args.task, cfg=cfg)
     venv = RslRlVecEnvWrapper(env, clip_actions=agent.clip_actions)
     agent = handle_deprecated_rsl_rl_cfg(agent, check_rsl_rl_version())
     runner = create_rsl_rl_runner(venv, agent)
@@ -75,7 +80,7 @@ with launch_simulation(cfg, args):
 
     def save(path, it):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        torch.save({"student": net.state_dict(), "teacher": args.teacher, "iters": it, "obs_dim": D, "history": H,
+        torch.save({"student": net.state_dict(), "teacher": args.teacher, "iters": it, "obs_dim": D, "history": H, "no_contact": bool(args.no_contact),
                     "est": EST, "delay_max_ms": args.delay_max * 5}, path)
 
     t0 = time.time()
@@ -84,7 +89,10 @@ with launch_simulation(cfg, args):
         X, A, M, fell = [], [], [], 0
         with torch.no_grad():
             for _ in range(args.steps):
-                h = hist.push(obs["student"].clone())
+                so = obs["student"].clone()
+                if args.no_contact:
+                    so[:, 36:40] = 0.0
+                h = hist.push(so)
                 a_t = teach(obs).clone()
                 m_t = motion_state(u).clone()
                 a_s, _ = net(h)
