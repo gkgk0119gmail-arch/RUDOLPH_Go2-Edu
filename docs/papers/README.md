@@ -10,6 +10,7 @@
 | 4 | CoINS (arXiv 2601.03956) | 예정 | |
 | 5 | AINav (arXiv 2503.22942) | 예정 | |
 | 6 | NaVILA | 예정 | |
-| 7 | COMRES-VLM / LLM-MCoX (arXiv 2509.26324) | 예정 | |
-| 8 | ReasonNav (arXiv 2509.21189) | 예정 | |
+| 7 | COMRES-VLM / LLM-MCoX (arXiv 2509.26324) | 정독 완료 2026-11-27 | [comres_vlm.md](comres_vlm.md) |
+| 8 | ReasonNav (arXiv 2509.21189) | 정독 완료 2026-11-27 | [reasonnav.md](reasonnav.md) |
 | 9 | 3D 커버리지 탐사·학습형 목표점 선택 (조사 후 선정) | 예정 | |
+| 10 | SLOOP: spatial language object-oriented POMDP (arXiv 2012.02705, RO-MAN 2021) | 정독 완료 2026-11-27 | [sloop.md](sloop.md) |
