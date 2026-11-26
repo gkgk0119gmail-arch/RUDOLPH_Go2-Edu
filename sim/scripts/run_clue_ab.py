@@ -1,0 +1,55 @@
+"""Plan-doc stage 2: A (coverage) vs B (clue belief map, gold JSON) on generated buildings, paired by seed.
+
+    python scripts/run_clue_ab.py --seeds 0:120 --out results/clue/ab_v1.json
+"""
+import argparse
+import json
+import sys
+import time
+from multiprocessing import Pool
+from pathlib import Path
+
+import numpy as np
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from clue import search2d as S  # noqa: E402
+
+ap = argparse.ArgumentParser()
+ap.add_argument("--seeds", default="0:120")
+ap.add_argument("--out", required=True)
+ap.add_argument("--n_victims", type=int, default=6)
+ap.add_argument("--n_clues", type=int, default=3)
+ap.add_argument("--quality", default="spoken")
+ap.add_argument("--variants", default="A,B")
+ap.add_argument("--workers", type=int, default=16)
+a = ap.parse_args()
+ALL = {"A": dict(beta=0.0), "B": dict(beta=1.0), "A_doc": dict(beta=0.0, score="doc"), "B_doc": dict(beta=1.0, score="doc"),
+       "B_mobile": dict(beta=1.0, mobility="unknown")}
+V = {k: ALL[k] for k in a.variants.split(",")}
+lo, hi = map(int, a.seeds.split(":"))
+kw = dict(n_victims=a.n_victims, n_clues=a.n_clues, quality=a.quality)
+
+
+def boot(x, n=4000, rng=np.random.default_rng(0)):
+    x = np.asarray(x, float)
+    m = rng.choice(x, (n, len(x))).mean(1)
+    return float(x.mean()), float(np.percentile(m, 2.5)), float(np.percentile(m, 97.5))
+
+
+if __name__ == "__main__":
+    t = time.time()
+    with Pool(a.workers) as p:
+        rows = p.map(S.run_job, [(s, V, kw) for s in range(lo, hi)])
+    summ = {}
+    for k in V:
+        summ[k] = {m: round(float(np.mean([r[k][m] for r in rows])), 3) for m in ("t_all", "t_first", "auc", "n_found", "all_found", "path", "coverage")}
+    base = list(V)[0]
+    for k in list(V)[1:]:
+        for m in ("t_all", "auc", "t_first"):
+            mu, l, h = boot([r[k][m] - r[base][m] for r in rows])
+            summ[k][f"d_{m}_vs_{base}"] = [round(mu, 3), round(l, 3), round(h, 3)]
+    out = dict(args=vars(a), seconds=round(time.time() - t, 1), summary=summ, rows=rows)
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(a.out).write_text(json.dumps(out, indent=1))
+    print(json.dumps(dict(args=vars(a), summary=summ), indent=1))
