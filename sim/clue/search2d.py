@@ -43,12 +43,14 @@ class Building:
     facing: float             # reporter heading [rad, map: 0 = +col, CCW positive with row up]
     victims: list
     clues: list               # dicts in schema form + "victim" index (oracle match on detection)
+    mobile: list = field(default_factory=list)  # per victim: random-walk diffusion coefficient [m^2/s] (0 = trapped)
     rooms: list = field(default_factory=list)   # dict(box=(y0, y1, x0, x1), side="left"|"right", ordinal, door=[(y, x)])
     side_rows: dict = field(default_factory=dict)  # side -> (y0, y1); left / right as seen walking east from the lobby
     corr_x0: int = 0          # first corridor column after the lobby
 
 
-def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str = "spoken", p_wrong: float = 0.0) -> Building:
+def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str = "spoken", p_wrong: float = 0.0,
+                  mobile: float = 0.0, clue_age: float = 0.0) -> Building:
     """quality "spoken": direction to 45 deg, distance x U(0.85, 1.15) rounded to 5 m (how people talk)
                "semantic": "corridor, left / right, n-th room" for victims in rooms (others fall back to spoken)
                "exact":  true bearing and distance, narrow distribution (upper bound for geometric clues)
@@ -137,7 +139,17 @@ def make_building(seed: int, n_victims: int = 6, n_clues: int = 3, quality: str 
                 c["distance_m"] = float(max(5, round(c["distance_m"] * (2.0 if wrong == "far" else 0.5) / 5) * 5))
         clues.append({"utterance": "clue", "anchor": "reporter", "certainty": "high", "count": 1, "victim": int(k),
                       "wrong": wrong, **c})
-    return Building(g, start, facing, victims, clues, rooms,
+    if mobile > 0 and clue_age > 0:          # the clues describe where people were clue_age seconds ago
+        fr = g == FREE
+        for i, (y, x) in enumerate(victims):
+            for st in rng.integers(0, 4, rng.poisson(4 * mobile / CELL ** 2 * clue_age)):
+                dy, dx = ((1, 0), (-1, 0), (0, 1), (0, -1))[st]
+                if fr[y + dy, x + dx]:
+                    y, x = y + dy, x + dx
+            victims[i] = (y, x)
+    for c in clues:
+        c["age_s"] = clue_age
+    return Building(g, start, facing, victims, clues, [mobile] * len(victims), rooms,
                     {"left": (1, y_c0 - 1), "right": (y_c0 + corr + 1, H - 1)}, lobby_w + 2)
 
 
@@ -171,6 +183,10 @@ class Search:
         # belief of clue k = prior_k(current map) x P(no detection so far) over passable cells, normalised.
         # Keeping the miss likelihood separate lets the prior change when room labels appear without losing looks.
         self.nodet = np.ones((H, W))
+        self.vpos = list(b.victims)            # true positions (move when b.mobile > 0)
+        self.t_last = 0.0
+        self.free_truth = b.grid == FREE
+        self.post = {}                         # explicit posteriors (used when the belief spreads, D > 0)
         self.active, self.fixed = {}, {}
         if self.use_clues:
             self.t += TALK_S
@@ -179,6 +195,8 @@ class Search:
                 if not c.get("semantic"):
                     kw = {"half_angle": c["_half_angle"], "dist_rel": c["_dist_rel"]} if "_half_angle" in c else {}
                     self.fixed[i] = B.clue_prior(np.zeros((H, W), np.int8), CELL, b.start, b.facing, c, **kw)
+                    if self.D > 0:   # spread for the time since the sighting (walls unknown yet: free space)
+                        self.post[i] = B.spread(self.fixed[i], np.zeros((H, W), np.int8), CELL, c.get("age_s", 0.0), self.D)
 
     ROOM_W = 5.0 / CELL           # assumed room width before rooms are seen
 
@@ -218,6 +236,8 @@ class Search:
 
     def beliefs(self):
         """-> [(trust w_k, normalised belief)] for active clues."""
+        if self.D > 0:
+            return [(self.weight(k), m) for k, m in self.post.items() if self.active.get(k)]
         ok = (self.known != OCC) * self.nodet
         out = []
         for k, on in self.active.items():
@@ -237,7 +257,26 @@ class Search:
         before = np.cumsum(blk, axis=1) - blk
         return y, x, before == 0
 
+    def _move_victims(self, dt):
+        rng = self.rng
+        for i, Dm in enumerate(self.b.mobile):
+            if Dm <= 0 or self.found[i] is not None or dt <= 0:
+                continue
+            n = rng.poisson(4 * Dm / CELL ** 2 * dt)          # lattice random walk: D = a^2 * rate / 4
+            y, x = self.vpos[i]
+            for st in rng.integers(0, 4, n):
+                dy, dx = ((1, 0), (-1, 0), (0, 1), (0, -1))[st]
+                if self.free_truth[y + dy, x + dx]:
+                    y, x = y + dy, x + dx
+            self.vpos[i] = (y, x)
+
     def sense(self, spin=False):
+        dt = self.t - self.t_last
+        self.t_last = self.t
+        self._move_victims(dt)
+        if self.D > 0 and dt > 0:
+            for k in list(self.post):
+                self.post[k] = B.spread(self.post[k], self.known, CELL, dt, self.D)
         y, x, s = self._rays()
         self.known[y[s], x[s]] = self.b.grid[y[s], x[s]]
         self.known[self.pos] = FREE
@@ -248,13 +287,18 @@ class Search:
         seen &= self.b.grid == FREE
         seen[self.pos] = True
         self.searched |= seen
-        for i, v in enumerate(self.b.victims):
+        for i, v in enumerate(self.vpos):
             if self.found[i] is None and seen[v] and self.rng.random() < P_SEE:
                 self.found[i] = self.t
                 for k in self.active:
                     if self.clues[k]["victim"] == i:     # oracle match (appearance in reality)
                         self.active[k] = False
         self.nodet[seen] *= 1 - P_DETECT_MODEL
+        for k in list(self.post):
+            m = self.post[k] * (self.known != OCC)
+            m[seen] *= 1 - P_DETECT_MODEL
+            s_ = m.sum()
+            self.post[k] = m / s_ if s_ > 1e-12 else m
 
     # -- planning ------------------------------------------------------------------------------------------
     def plan(self):

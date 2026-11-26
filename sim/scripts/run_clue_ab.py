@@ -23,11 +23,13 @@ ap.add_argument("--n_clues", type=int, default=3)
 ap.add_argument("--quality", default="spoken")
 ap.add_argument("--variants", default="A,B")
 ap.add_argument("--p_wrong", type=float, default=0.0)
+ap.add_argument("--mobile", type=float, default=0.0, help="victims' random-walk D [m^2/s]")
+ap.add_argument("--clue_age", type=float, default=0.0, help="seconds between the sighting and the clue")
 ap.add_argument("--parsed", help="parse output jsonl over results/clue/c_sentences.jsonl -> adds condition C")
 ap.add_argument("--workers", type=int, default=16)
 a = ap.parse_args()
 ALL = {"A": dict(beta=0.0), "B": dict(beta=1.0), "A_doc": dict(beta=0.0, score="doc"), "B_doc": dict(beta=1.0, score="doc"),
-       "B_mobile": dict(beta=1.0, mobility="unknown"),
+       "B_mobile": dict(beta=1.0, mobility="unknown"), "B_spread": dict(beta=1.0, mobility="mobile"),
        "A_noexit": dict(beta=0.0, early_exit=False), "B_noexit": dict(beta=1.0, early_exit=False)}
 ap2 = None
 V = {k: ALL[k] for k in a.variants.split(",") if k in ALL}
@@ -43,7 +45,7 @@ if a.parsed:   # condition C: what the parser made of each clue sentence (unusab
         per.setdefault(int(seed), []).append(c)
     V["C"] = dict(beta=1.0, clues={sd: [c for c in cs if c is not None] for sd, cs in per.items()})
 lo, hi = map(int, a.seeds.split(":"))
-kw = dict(n_victims=a.n_victims, n_clues=a.n_clues, quality=a.quality, p_wrong=a.p_wrong)
+kw = dict(n_victims=a.n_victims, n_clues=a.n_clues, quality=a.quality, p_wrong=a.p_wrong, mobile=a.mobile, clue_age=a.clue_age)
 
 
 def boot(x, n=4000, rng=np.random.default_rng(0)):
