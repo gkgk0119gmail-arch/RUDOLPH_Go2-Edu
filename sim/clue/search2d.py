@@ -158,7 +158,8 @@ _ANG = np.linspace(-np.pi, np.pi, 360, endpoint=False)
 
 class Search:
     def __init__(self, b: Building, a=1.0, beta=0.0, c=1.0, use_clues=None, seed=0, mobility="static",
-                 score="rate", t0=10.0, clues=None, trust=None, kappa=1.0, early_exit=True, witness=False):
+                 score="rate", t0=10.0, clues=None, trust=None, kappa=1.0, early_exit=True, witness=False,
+                 keyword=False):
         """score "rate": expected victims behind f / (travel time + t0), expected victims =
              w * sum of clue masses + (victims not covered by a clue + (1 - w) * active clues) * G(f) / sum G,
              w = clip(beta, 0, 1) = trust in the clues (0 = coverage search A, 1 = full trust)
@@ -167,6 +168,7 @@ class Search:
         trust: {"high"|"mid"|"low": w} per spoken certainty (default: beta for all); kappa: S = E / (C + t0)^kappa."""
         self.trust, self.kappa, self.early_exit, self.witness = trust, kappa, early_exit, witness
         self.n_witness = 0
+        self.keyword = keyword     # SLOOP "keyword" baseline: only the place word (a room), no side / ordinal
         self.clues = list(b.clues if clues is None else clues)
         self.b, self.a, self.beta, self.c, self.score, self.t0 = b, a, beta, c, score, t0
         self.use_clues = (beta > 0 or (trust is not None)) if use_clues is None else use_clues
@@ -230,6 +232,15 @@ class Search:
         if k in self.fixed:
             return self.fixed[k]
         c = self.clues[k]
+        if self.keyword and c.get("semantic") and c["semantic"] != ["room:next"]:
+            H, W = self.known.shape
+            p = np.zeros((H, W))
+            for q in self.b.rooms:
+                y0, y1, x0, x1 = q["box"]
+                p[y0:y1, x0:x1] = 1.0
+            ok = self.known != OCC
+            p = p * ok
+            return 0.9 * p / max(p.sum(), 1e-12) + 0.1 * ok / ok.sum()
         if c.get("semantic") == ["room:next"]:     # rooms next to the speaker's room, same side
             r = self.b.rooms[c["ref_room"]]
             H, W = self.known.shape
