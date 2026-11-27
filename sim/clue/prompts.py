@@ -49,3 +49,6 @@ PROMPTS = {
 }
 _RULES_ONLY = _V3_EXTRA.split("\n\n말:")[0] + "\n"        # v3 rules without the compact examples
 PROMPTS["v3f"] = V2[:V2.index("말: \"{u}\"")] + _RULES_ONLY + _TAIL
+# fine-tuned parser (clue/train_lora.py): the model learned the schema, so the prompt is one line and the reply lists
+# only the fields that were said (schema.normalize fills the rest). Short prompt + short reply = fast on the NX.
+PROMPTS["ft1"] = '수색 로봇이 들은 말을 단서 JSON으로 바꾸세요(말한 필드만).\n말: "{u}"'
