@@ -1,6 +1,9 @@
 """Parser prompt variants (clue/parse.py PROMPT is v2). Same JSON schema; fields left out mean null / empty.
 
 v2c: v2 rules, but the model writes only the fields the sentence says (shorter output -> faster).
+v3f: v2 full-field output (every field written, null when not said) + the v3 rules below. Compact output (v2c, v3)
+     halved latency but broke JSON and made the 8B model copy example numbers into unsaid fields, so v3f keeps the
+     full checklist and only adds the rules.
 v3:  v2c + fixes from the v2 error analysis (results/clue/parse_8b_v2_pilot.*):
      someone else's whereabouts inside "살려주세요" -> clue; place-only short answers -> clue; fire / smoke / 119 -> other;
      side only for "n-th room on that side", a bare "제 왼쪽" is a direction; "근처" + place -> near:<place>.
@@ -44,3 +47,5 @@ PROMPTS = {
     "v2c": _RULES + _COMPACT + _TAIL,
     "v3": _RULES + _COMPACT + _V3_EXTRA + _TAIL,
 }
+_RULES_ONLY = _V3_EXTRA.split("\n\n말:")[0] + "\n"        # v3 rules without the compact examples
+PROMPTS["v3f"] = V2[:V2.index("말: \"{u}\"")] + _RULES_ONLY + _TAIL
