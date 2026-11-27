@@ -26,6 +26,7 @@ Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D43
 - 2026-11-26: 시뮬레이션에서만 학습한 HiPAN 하위 보행 정책을 실제 Go2에 그대로 올려 걷기 성공.
 - 같은 날, depth 항법 student(지도 없이 D435i depth + 목표점)를 실로봇에서 실제 실행: 목표점 2–3 m, 7회 중 4회 도착 (사용자 정지 2회, 첫 지형에서 넘어짐 1회). 머리 위 장애물 앞에서 몸을 숙였다가 지나서 다시 일어남 ([시험 기록](docs/real_test_20261126.md)).
 - 2026-11-27: 연구 전체 개요도와 노드별 설명 그림 추가 (아래).
+- 2026-11-27: 노트북 제어판 추가: NX 작업을 버튼으로 실행·정지하고, 단서를 채팅처럼 입력 ([tools/panel](tools/panel/README.md)).
 
 ### 연구 개요
 
@@ -206,6 +207,7 @@ camera_init (FAST-LIO 월드)
 │   └── fast_lio_hesai_foxy.patch  # FAST-LIO(ROS2) 수정분: Hesai 입력 처리 + Foxy 호환
 ├── maps/                     # 직접 딴 지도 (.pcd)
 ├── tools/                    # render_map_preview.py, install_korean.sh
+│   └── panel/                # 노트북 제어판 (PyQt5, SSH → NX remote.sh), 단서 채팅
 ├── deploy/                   # 실로봇 정책 실행·검증: 가중치(.bin), 실행/종료 스크립트, 모드 전환, 실측 분석
 ├── sim/                      # 시뮬레이션·강화학습 (sim/README.md)
 └── docs/                     # setup.md, troubleshooting.md, images/
@@ -216,6 +218,12 @@ camera_init (FAST-LIO 월드)
 ## 실행 방법
 
 설치·빌드는 [docs/setup.md](docs/setup.md) 참고.
+
+**노트북 제어판**: 아래 명령들을 버튼으로 실행하고, 단서를 채팅처럼 보냅니다 ([사용법](tools/panel/README.md)).
+
+```bash
+RUDOLPH_NX=unitree@<NX 와이파이 주소> python3 tools/panel/rudolph_panel.py
+```
 
 ```bash
 # 1) 센서만 확인 (Hesai + RealSense + rviz)
