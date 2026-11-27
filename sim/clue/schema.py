@@ -25,7 +25,6 @@ Conventions
   certainty     speaker's own certainty: "high" (plain statement) | "mid" ("아마", "~것 같아요") | "low" ("잘 모르겠는데")
 """
 from __future__ import annotations
-from __future__ import annotations
 
 import json
 import re
