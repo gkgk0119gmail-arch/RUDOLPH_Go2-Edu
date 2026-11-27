@@ -226,6 +226,7 @@ Unitree Go2 EDU Plus(Hesai XT16 + RealSense D435i)가 **처음 보는 재난 실
 - 방향·거리 단서는 확신도 정답이 47 → 90 %로 올라 정답 JSON의 95 %까지 따라감. 의미 단서는 그대로: "복도 따라가다 보면 왼쪽에 방들 있잖아요, 3번째 방"을 왼쪽 복도로 읽는 오류(같은 장소 96 → 93 %)
 - 조건 C의 모든 필드 일치(27 %)는 낮게 보이지만, 시뮬레이터 라벨이 말하지 않은 "큰 복도"를 항상 넣고 "갇혀 있어요"에도 이동 상태를 비워 두기 때문. 지도에는 같은 장소 지표가 맞는 기준
 - 한계: 학습 템플릿과 시험 문장 모두 우리가(LLM 포함) 쓴 문장. 실제 사람 말에서 다시 확인해야 함
+- **Q4 GGUF (llama.cpp ca123ba, NX와 같은 커밋)**: 어댑터를 합침 (`clue/merge_lora.py`) → `convert_hf_to_gguf.py` bf16 → `llama-quantize Q4_K_M` (5.0 GB). 5090 CPU llama-server로 시험 문장 20개: 모든 필드 일치 90 % (bf16 90 %), 프롬프트 약 60토큰 + 답 약 26토큰 (v3f 1,335 + 약 100). NX 속도는 다음 측정 (`scripts/check_gguf_parser.py`)
 - 원자료: `results/clue/parse_ft1_{pilot,c}.*`, `results/clue/parse_ft_smoke_pilot.*`, `results/clue/abc_8b_ft1_*.json`. 어댑터는 5090 `~/3DDOG/rudolph_jobs/out/lora_8b_v1` (GitHub에는 올리지 않음)
 
 

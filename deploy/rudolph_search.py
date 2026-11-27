@@ -9,7 +9,8 @@
 Direction clues are always in the ROBOT's frame (x forward, y left) at the moment the text arrives.
 Pipeline: /cloud_registered (map frame) -> LiveGrid (0.2 m: floor / obstacle band) -> LiveSearch (camera footprint =
 searched, clue probability maps, per-reporter Bayesian trust, frontier rate score) -> goal (PoseStamped, camera_init).
-Clue text is parsed by the Qwen service (sim/clue/serve_parse.py, lab 5090) in a background thread.
+Clue text is parsed in a background thread by the fine-tuned Qwen3-VL-8B Q4 GGUF on the NX's llama-server (default,
+prompt ft1), or by sim/clue/serve_parse.py on a GPU PC (--parser http://HOST:8765).
 Publishes for rviz: /rudolph/map, /rudolph/searched, /rudolph/belief (OccupancyGrid), /rudolph/goal, /rudolph/status.
 """
 import argparse
@@ -30,12 +31,16 @@ from std_msgs.msg import Empty, String
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "sim"))
+from clue import schema as SCH  # noqa: E402
 from clue.live import LiveGrid, LiveSearch  # noqa: E402
+from clue.prompts import PROMPTS  # noqa: E402
 from clue.search2d import CELL, FREE, OCC  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--live", action="store_true", help="also publish /goal_pose (the nav student walks there)")
-ap.add_argument("--parser", default="http://165.132.135.75:8765", help="clue parse service")
+ap.add_argument("--parser", default="llama:http://127.0.0.1:8080",
+                help="clue parser: 'llama:URL' = llama-server with the fine-tuned GGUF (prompt ft1, NX), "
+                     "or URL of sim/clue/serve_parse.py (POST /parse)")
 ap.add_argument("--size", type=float, default=120.0, help="map square [m] around the start pose")
 ap.add_argument("--n_unclued", type=int, default=1, help="people expected besides the ones clues mention")
 ap.add_argument("--arrive", type=float, default=0.5, help="goal reached within this distance [m]")
@@ -96,20 +101,34 @@ def on_cloud(m):
         S["n_scans"] += 1
 
 
+def ask_parser(text):
+    """-> parsed clue dict (schema-normalized)."""
+    if args.parser.startswith("llama:"):     # llama-server (OpenAI chat API), fine-tuned parser, short reply
+        body = json.dumps({"messages": [{"role": "user", "content": PROMPTS["ft1"].format(u=text)}],
+                           "temperature": 0, "max_tokens": 200}).encode()
+        req = urllib.request.Request(args.parser[6:] + "/v1/chat/completions", body, {"Content-Type": "application/json"})
+        raw = json.loads(urllib.request.urlopen(req, timeout=60).read())["choices"][0]["message"]["content"]
+        parsed, _ = SCH.normalize(SCH.extract_json(raw))
+        if parsed is None:
+            raise ValueError("no JSON in reply: %r" % raw[:80])
+        return parsed
+    body = json.dumps({"text": text}).encode()
+    req = urllib.request.Request(args.parser + "/parse", body, {"Content-Type": "application/json"})
+    return json.loads(urllib.request.urlopen(req, timeout=60).read())["parsed"]
+
+
 def parse_and_add(text, pose_rc, head):
     t = time.time()
     try:
-        body = json.dumps({"text": text}).encode()
-        req = urllib.request.Request(args.parser + "/parse", body, {"Content-Type": "application/json"})
-        rep = json.loads(urllib.request.urlopen(req, timeout=60).read())
+        parsed = ask_parser(text)
     except Exception as e:  # noqa: BLE001  (network / service down: keep searching without the clue)
         status("parser failed (%s): clue ignored: %s" % (e, text))
         record("parse_fail", text=text, error=str(e))
         return
     with lock:
-        msg = S["search"].add_clue(rep["parsed"], text=text, anchor=(pose_rc, head))
+        msg = S["search"].add_clue(parsed, text=text, anchor=(pose_rc, head))
         S["dirty"] = True
-    record("clue", text=text, parsed=rep["parsed"], latency=time.time() - t, result=msg)
+    record("clue", text=text, parsed=parsed, latency=time.time() - t, result=msg)
     status("clue (%.1fs): %s -> %s" % (time.time() - t, text, msg))
 
 

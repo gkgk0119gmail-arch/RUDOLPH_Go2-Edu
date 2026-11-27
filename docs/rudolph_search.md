@@ -4,14 +4,16 @@
 방향 단서는 **항상 로봇 기준**(문장이 들어온 순간 로봇의 정면이 0°, 오른쪽 90°)이다.
 
 ```
-텍스트 ─(Wi-Fi)→ 5090 파싱 서버 (Qwen3-VL-8B, 프롬프트 v3f, ~1.5 s) ─→ 단서 JSON
+텍스트 ─→ NX llama-server (미세조정 Qwen3-VL-8B Q4, 프롬프트 ft1) ─→ 단서 JSON   (예비: 5090 serve_parse)
 FAST-LIO /cloud_registered, /Odometry ─→ LiveGrid (0.2 m 2D 격자) ─→ LiveSearch ─→ /goal_pose ─→ run_hipan_nav.py
                                           카메라 시야 = 본 곳 / 단서 확률 지도 × 신뢰도 / 경계 후보 점수
 ```
 
 | 파일 | 내용 |
 |---|---|
-| `sim/clue/serve_parse.py` | 파싱 HTTP 서버 (`POST /parse {"text": ...}`), 5090에서 실행 |
+| `rudolph_parser_8b_v1_Q4_K_M.gguf` | 미세조정 해석기 (5.0 GB, GitHub에 없음: 데스크톱 `~/Desktop/3DOG/models/`, 5090 `~/3DDOG/rudolph_jobs/out/`) |
+| `sim/scripts/check_gguf_parser.py` | llama-server 해석기 정확도·시간 측정 (python 3.8) |
+| `sim/clue/serve_parse.py` | 예비 파싱 HTTP 서버 (`POST /parse {"text": ...}`), GPU PC에서 실행 |
 | `sim/clue/live.py` | `LiveGrid` (실시간 2D 격자), `LiveSearch` (시뮬레이터 `Search`와 같은 판단 코드를 실제 입력으로) |
 | `deploy/rudolph_search.py` | ROS2 노드 (NX, foxy, python 3.8) |
 | `deploy/record_scans.py`, `deploy/offline_search.py`, `deploy/render_rudolph_state.py` | 스캔 녹화 → 오프라인 재실행 → 그림 |
@@ -20,8 +22,10 @@ FAST-LIO /cloud_registered, /Odometry ─→ LiveGrid (0.2 m 2D 격자) ─→ L
 ## 실행
 
 ```bash
-# 5090 (연구실 PC): 파싱 서버
-cd ~/3DDOG/RUDOLPH/sim && env -u PYTHONPATH ~/miniconda3/envs/packr/bin/python -m clue.serve_parse --port 8765
+# NX: 해석기 (llama.cpp, tmux)
+~/llm/llama.cpp/build/bin/llama-server -m ~/models/rudolph_parser_8b_v1_Q4_K_M.gguf -ngl 99 -c 1024 --host 127.0.0.1 --port 8080
+python3 ~/Desktop/3DOG/sim/scripts/check_gguf_parser.py --url http://127.0.0.1:8080 --n 30   # 정확도·시간 확인
+# (예비) 5090 파싱 서버를 쓸 때: rudolph_search.py --parser http://165.132.135.75:8765
 
 # NX: SLAM + 하위 보행 + 상위 항법이 돌고 있는 상태에서
 cd ~/Desktop/3DOG/deploy && source ../env.sh
@@ -46,7 +50,8 @@ rviz: `/rudolph/map`, `/rudolph/searched`, `/rudolph/belief` (OccupancyGrid), `/
 ## 시험 결과
 
 - 시뮬레이터 (건물 40개, 방향·거리 단서): `LiveSearch`가 기존 `Search`와 같거나 조금 빠름 (맞는 단서 393 vs 410초, 1/3 틀림 393 vs 443초). 계획 범위를 본 영역으로 자른 효과
-- NX → 5090 파싱: 단서 하나 1.5–1.7초
+- NX → 5090 파싱 (v3f 프롬프트): 단서 하나 1.5–1.7초
+- 미세조정 Q4 GGUF (5090 CPU llama-server로 변환 확인, 20문장): 모든 필드 일치 90 % (bf16과 같음), 프롬프트 약 60토큰 + 답 약 26토큰 (v3f는 1,335 + 약 100). NX 시간은 아직 측정 전
 - 녹화 재생 (2026-11-25 밤 녹화, 1321 스캔): 격자 갱신 3 ms/스캔, 계획 평균 0.22초 (데스크톱 CPU). 복도는 빈 곳, 벽은 선으로, 목표는 복도 끝·갈림길의 경계에 찍힘
 
 <img src="images/rudolph_search_replay.png" width="80%">
