@@ -15,3 +15,8 @@ sim/results/hipan_nav/*.npy
 sim/weights/*_it[0-9]*.pt
 # C++ weights live in deploy/weights; sim/weights/deploy keeps the npz only
 sim/weights/deploy/*.bin
+
+# CV: recorded clips, eval outputs, downloaded YOLO weights (kept locally / on the NX)
+cv/data/
+cv/results/
+cv/weights/

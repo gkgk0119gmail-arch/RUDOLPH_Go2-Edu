@@ -42,6 +42,11 @@ RUDOLPH_NX=unitree@<NX wifi 주소> python3 tools/panel/rudolph_panel.py
 | `remote.sh` | NX | 창구: `status screen logs start stop savemap mode clue victim usage` (맨 위 주석에 전체) |
 | `send_clue.py` | NX | 단서 → `/rudolph/clue_text`, 발견 → `/rudolph/victim_here` (수색 노드가 없으면 안 보내고 알려 줌) |
 | `../zenoh/` | 둘 다 | `RViz (노트북)` 버튼: Zenoh 브리지 + SSH 터널로 지도·점군·깊이·**Go2 머리 카메라**를 노트북 RViz 에 ([README](../zenoh/README.md)) |
+| `record_box.py` | 노트북 | '영상 녹화' 칸: 녹화 시작·정지 → 제목(직접 입력 또는 자세·거리·가림 / empty·장소 선택) → 저장·버리기 |
+| `rec.sh` | NX | `remote.sh rec start\|stop\|save <이름>\|discard\|status\|list`. 머리 카메라 H264 를 디코딩 없이 mp4 로 (CPU ~1 %) → `cv/data/baseline/<이름>.mp4` |
+
+- 녹화한 영상은 데스크톱에서 `cv/fetch.sh` 로 가져와 `python -m cv.eval_baseline` 으로 사람 검출 기준 성능을 잽니다.
+  녹화는 제어판 창을 닫아도 NX 에서 계속되고, 다시 열면 상태(녹화 중·저장 대기)를 이어 받습니다.
 
 - 제어판으로 띄운 작업은 NX tmux 세션 `rd_<작업>` 에서 돕니다. NX 에서 직접 보기: `tmux attach -t rd_low`.
   출력은 `deploy/logs/panel/<작업>_<시각>.log` 에도 남고 `<작업>_last.log` 가 마지막 실행을 가리킵니다.

@@ -30,6 +30,7 @@
 #     usage                  이 저장소 주요 스크립트 맨 위 사용법 주석
 #     bridge start|stop      노트북 RViz 용 Zenoh 브리지 (tools/zenoh/nx.json5, 127.0.0.1:7447, 코어 0-3·nice 10)
 #     tunnel                 노트북 SSH 터널(tools/zenoh/link.sh)의 NX 쪽. 그 sshd 를 코어 0-3·nice 19 로 묶고 기다림
+#     rec start|stop|save <이름>|discard|status|list   내장 머리 카메라 영상 녹화 (rec.sh)
 # ============================================================================
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"     # NX: ~/Desktop/3DOG
@@ -206,6 +207,10 @@ victim)
     envs
     python3 "$PANEL/send_clue.py" victim
     ;;
+rec)
+    shift
+    exec "$PANEL/rec.sh" "$@"
+    ;;
 bridge)
     ZB="$ROOT/tools/zenoh/aarch64/zenoh-bridge-ros2dds"
     case "${2:-start}" in
@@ -254,7 +259,7 @@ usage)
     done
     ;;
 *)
-    sed -n '3,32p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,33p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac

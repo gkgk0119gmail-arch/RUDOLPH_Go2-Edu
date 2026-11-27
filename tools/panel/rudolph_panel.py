@@ -26,6 +26,8 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBox,
                              QLabel, QLineEdit, QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QSplitter,
                              QTabWidget, QTextBrowser, QVBoxLayout, QWidget)
 
+from record_box import RecordBox
+
 HOST = os.environ.get("RUDOLPH_NX", "unitree@192.168.123.18")
 NX_ROOT = os.environ.get("RUDOLPH_NX_ROOT", "Desktop/3DOG")          # NX 홈 기준
 REMOTE = NX_ROOT + "/tools/panel/remote.sh"
@@ -122,7 +124,7 @@ class Panel(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("RUDOLPH 제어판 — " + HOST)
-        self.resize(1280, 860)
+        self.resize(1280, 980)
         self.ssh = Ssh(self)
         self.st = {}
         self.seen_chat = set()
@@ -149,13 +151,19 @@ class Panel(QMainWindow):
         v.addLayout(chips)
 
         split = QSplitter(Qt.Horizontal)
-        split.addWidget(self.build_jobs())
+        left = QWidget()
+        lv = QVBoxLayout(left)
+        lv.setContentsMargins(0, 0, 0, 0)
+        lv.addWidget(self.build_jobs(), 1)
+        self.rec = RecordBox(self.ssh, self.say)          # 내장 카메라 영상 녹화 (record_box.py, NX rec.sh)
+        lv.addWidget(self.rec)
+        split.addWidget(left)
         split.addWidget(self.build_chat())
         split.setSizes([700, 560])
         vs = QSplitter(Qt.Vertical)
         vs.addWidget(split)
         vs.addWidget(self.build_tabs())
-        vs.setSizes([520, 320])
+        vs.setSizes([660, 300])
         v.addWidget(vs, 1)
         self.setCentralWidget(root)
 
@@ -515,6 +523,7 @@ class Panel(QMainWindow):
     def shutdown(self):
         for t in (self.t_status, self.t_screen):
             t.stop()
+        self.rec.shutdown()
         self.ssh.close()
 
     def closeEvent(self, e):
