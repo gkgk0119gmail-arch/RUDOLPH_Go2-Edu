@@ -41,6 +41,7 @@ RUDOLPH_NX=unitree@<NX wifi 주소> python3 tools/panel/rudolph_panel.py
 | `rudolph_panel.py` | 노트북 | PyQt5 창. 모든 일을 `ssh <NX> remote.sh <명령>` 으로 |
 | `remote.sh` | NX | 창구: `status screen logs start stop savemap mode clue victim usage` (맨 위 주석에 전체) |
 | `send_clue.py` | NX | 단서 → `/rudolph/clue_text`, 발견 → `/rudolph/victim_here` (수색 노드가 없으면 안 보내고 알려 줌) |
+| `../zenoh/` | 둘 다 | `RViz (노트북)` 버튼: Zenoh 브리지 + SSH 터널로 지도·점군·깊이·**Go2 머리 카메라**를 노트북 RViz 에 ([README](../zenoh/README.md)) |
 
 - 제어판으로 띄운 작업은 NX tmux 세션 `rd_<작업>` 에서 돕니다. NX 에서 직접 보기: `tmux attach -t rd_low`.
   출력은 `deploy/logs/panel/<작업>_<시각>.log` 에도 남고 `<작업>_last.log` 가 마지막 실행을 가리킵니다.
@@ -61,3 +62,5 @@ RUDOLPH_NX=unitree@<NX wifi 주소> python3 tools/panel/rudolph_panel.py
 - 2026-11-27 (데스크톱 유선, NX 에서 보행 시험 중): status·screen·usage 조회와 창 그리기만 시험. SSH ✓, Go2 ✓,
   제어판 밖에서 돌던 하위 보행을 `모델 v3c · 명령 리모컨 (제어판 밖에서 띄움)` 으로 정확히 읽음, 닫을 때 경고 없음.
   **start / stop / mode / clue / victim 은 로봇에서 아직 안 눌러 봤습니다** (보행 시험 중이라 건드리지 않음).
+- 2026-11-27 (사용자, 노트북): 하위 보행 v3c 리모컨 시작·앉히고 종료 ✓, 센서만 ✓, SLAM ✓. 노트북 RViz 에 아무것도 안 보임
+  → NX DDS 가 eth0 전용이라서. Zenoh 브리지로 해결 ([../zenoh](../zenoh/README.md)), 데스크톱(Humble)에서 RViz 로 지도·점군·깊이·머리 카메라 확인.

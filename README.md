@@ -27,6 +27,7 @@ Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D43
 - 같은 날, depth 항법 student(지도 없이 D435i depth + 목표점)를 실로봇에서 실제 실행: 목표점 2–3 m, 7회 중 4회 도착 (사용자 정지 2회, 첫 지형에서 넘어짐 1회). 머리 위 장애물 앞에서 몸을 숙였다가 지나서 다시 일어남 ([시험 기록](docs/real_test_20261126.md)).
 - 2026-11-27: 연구 전체 개요도와 노드별 설명 그림 추가 (아래).
 - 2026-11-27: 노트북 제어판 추가: NX 작업을 버튼으로 실행·정지하고, 단서를 채팅처럼 입력 ([tools/panel](tools/panel/README.md)).
+- 2026-11-27: 노트북 RViz 연결 (Zenoh 브리지 + SSH 터널): 와이파이로 지도·점군·D435i 깊이·Go2 머리 카메라 보기 ([tools/zenoh](tools/zenoh/README.md)).
 
 ### 연구 개요
 
@@ -207,7 +208,8 @@ camera_init (FAST-LIO 월드)
 │   └── fast_lio_hesai_foxy.patch  # FAST-LIO(ROS2) 수정분: Hesai 입력 처리 + Foxy 호환
 ├── maps/                     # 직접 딴 지도 (.pcd)
 ├── tools/                    # render_map_preview.py, install_korean.sh
-│   └── panel/                # 노트북 제어판 (PyQt5, SSH → NX remote.sh), 단서 채팅
+│   ├── panel/                # 노트북 제어판 (PyQt5, SSH → NX remote.sh), 단서 채팅
+│   └── zenoh/                # 노트북 RViz: Zenoh 브리지 + SSH 터널, Go2 머리 카메라 → ROS 이미지
 ├── deploy/                   # 실로봇 정책 실행·검증: 가중치(.bin), 실행/종료 스크립트, 모드 전환, 실측 분석
 ├── sim/                      # 시뮬레이션·강화학습 (sim/README.md)
 └── docs/                     # setup.md, troubleshooting.md, images/

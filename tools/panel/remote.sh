@@ -28,6 +28,8 @@
 #     clue <base64>          단서 문장 → /rudolph/clue_text (base64 = 따옴표·한글 안전)
 #     victim                 지금 로봇 위치에서 요구조자 발견 → /rudolph/victim_here
 #     usage                  이 저장소 주요 스크립트 맨 위 사용법 주석
+#     bridge start|stop      노트북 RViz 용 Zenoh 브리지 (tools/zenoh/nx.json5, 127.0.0.1:7447, 코어 0-3·nice 10)
+#     tunnel                 노트북 SSH 터널(tools/zenoh/link.sh)의 NX 쪽. 그 sshd 를 코어 0-3·nice 19 로 묶고 기다림
 # ============================================================================
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"     # NX: ~/Desktop/3DOG
@@ -88,6 +90,7 @@ status)
     flag hesai     'hesai_ros_driver_node'
     flag realsense 'realsense2_camera_node'
     flag fastlio   'fastlio_mapping'
+    flag bridge    'zenoh-bridge-ros2dds'
     flag search_live 'rudolph_search.py --live'
     # 보행 노드 인자에서 모델·명령 출처
     w=""; src=""
@@ -203,6 +206,42 @@ victim)
     envs
     python3 "$PANEL/send_clue.py" victim
     ;;
+bridge)
+    ZB="$ROOT/tools/zenoh/aarch64/zenoh-bridge-ros2dds"
+    case "${2:-start}" in
+    start)
+        [ -n "$(pids_of zenoh-bridge-ros2dds)" ] && { echo "✓ 브리지 이미 실행 중"; exit 0; }
+        [ -x "$ZB" ] || { echo "✗ 브리지 실행 파일 없음: $ZB (tools/zenoh/fetch.sh)"; exit 1; }
+        # 보행과 무관한 중계라 코어 0-3·nice 10 (보행 노드는 rt 우선순위로 다른 코어)
+        log="$LOGDIR/bridge_$(date +%Y%m%d_%H%M%S).log"
+        ln -sfn "$log" "$LOGDIR/bridge_last.log"
+        tmux kill-session -t rd_bridge 2>/dev/null
+        tmux new -d -s rd_bridge "source '$ROOT/env.sh'; exec taskset -c 0-3 nice -n 10 '$ZB' -c '$ROOT/tools/zenoh/nx.json5' 2>&1 | tee '$log'"
+        # 내장 머리 카메라 → /go2/front/image (하드웨어 디코딩, 480x270 2 Hz). 브리지와 같이 켜고 같이 끈다
+        if [ -z "$(pids_of front_cam_pub.py)" ]; then
+            tmux kill-session -t rd_frontcam 2>/dev/null
+            tmux new -d -s rd_frontcam "source '$ROOT/env.sh'; exec taskset -c 0-3 nice -n 10 python3 '$ROOT/tools/zenoh/front_cam_pub.py' 2>&1 | tee '$LOGDIR/frontcam_last.log'"
+        fi
+        sleep 1
+        [ -n "$(pids_of zenoh-bridge-ros2dds)" ] && echo "✓ 브리지 시작 (127.0.0.1:7447) + 머리 카메라" || { echo "✗ 브리지가 바로 끝남 — $log"; tail -3 "$log"; exit 1; }
+        ;;
+    stop)
+        for p in $(pids_of zenoh-bridge-ros2dds) $(pids_of front_cam_pub.py); do kill -INT "$p" 2>/dev/null; done
+        sleep 1
+        for p in $(pids_of zenoh-bridge-ros2dds) $(pids_of front_cam_pub.py); do kill "$p" 2>/dev/null; done
+        tmux kill-session -t rd_bridge 2>/dev/null; tmux kill-session -t rd_frontcam 2>/dev/null
+        echo "✓ 브리지 정지" ;;
+    *) echo "✗ bridge start|stop"; exit 1 ;;
+    esac
+    ;;
+tunnel)
+    # link.sh 의 'ssh -L ... remote.sh tunnel' 로만 불린다. $PPID = 이 터널 연결의 sshd
+    taskset -acp 0-3 "$PPID" >/dev/null 2>&1
+    renice -n 19 -p "$PPID" >/dev/null 2>&1
+    light
+    # 연결이 끊기면 echo 가 SIGPIPE 로 끝나 남지 않는다
+    while sleep 5; do echo || exit 0; done
+    ;;
 usage)
     light
     for f in start_sensors.sh slam_mapping.sh deploy/start_hipan_live.sh deploy/stop_hipan_low.sh deploy/nav_live.sh deploy/mode_switch.py deploy/rudolph_search.py; do
@@ -215,7 +254,7 @@ usage)
     done
     ;;
 *)
-    sed -n '3,33p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,32p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac

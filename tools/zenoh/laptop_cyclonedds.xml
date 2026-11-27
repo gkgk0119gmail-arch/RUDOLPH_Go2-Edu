@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- 노트북 브리지 전용 DDS 설정: 노트북 안(lo)에서만. 이것이 없으면 인터페이스마다 같은 메시지를 받아
+     노트북 → NX 메시지가 인터페이스 수만큼 중복됐다 (2026-11-27 실측: 6개 보내 30개 도착) -->
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain Id="any">
+    <General>
+      <Interfaces>
+        <NetworkInterface name="lo" />
+      </Interfaces>
+      <AllowMulticast>false</AllowMulticast>
+    </General>
+    <Discovery>
+      <Peers><Peer address="127.0.0.1" /></Peers>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>50</MaxAutoParticipantIndex>
+    </Discovery>
+  </Domain>
+</CycloneDDS>

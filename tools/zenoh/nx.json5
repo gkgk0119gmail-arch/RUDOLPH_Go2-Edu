@@ -1,0 +1,49 @@
+// ═══════════════════════════════════════════════════════════════════
+//  NX 쪽 Zenoh 브리지 — 노트북 RViz 로 보낼 토픽만 골라 내보낸다
+//
+//  remote.sh bridge start (제어판 'RViz' 버튼이 부름) 가 env.sh 를 source 한 뒤 띄운다.
+//
+//    NX 노드들 ──(DDS, eth0 설정 그대로)── 이 브리지(127.0.0.1:7447) ══(SSH 터널)══ 노트북 브리지 ── RViz
+//
+//  · NX 의 DDS 는 eth0 에만 묶여 있다 (cyclonedds.xml). 그대로 둔다 — Go2 유선 통신·보행 루프를 건드리지 않는다.
+//    와이파이로 나가는 길은 이 브리지 하나뿐이고, 그것도 SSH 터널 안이다.
+//  · 학교 와이파이가 느리다. 무거운 토픽은 pub_max_frequencies 로 솎는다 (NX 안의 주파수는 그대로).
+//  · 토픽을 더 보내려면 allow.publishers 에 넣고, 빠르거나 큰 것은 pub_max_frequencies 에도.
+// ═══════════════════════════════════════════════════════════════════
+{
+  plugins: {
+    ros2dds: {
+      ros_localhost_only: false,   // NX 노드들은 localhost 전용이 아니다 (eth0)
+      allow: {
+        // NX → 노트북
+        publishers: [
+          "^/tf$", "^/tf_static$",              // ★ 솎지 않는다 (여러 노드가 섞여 있어 특정 변환이 빠진다)
+          "^/map_cloud$",                       // 누적 지도 (10 cm 복셀, transient local)
+          "^/cloud_registered_body$",           // 현재 스캔
+          "^/path$", "^/Odometry$",
+          "^/camera/depth/image_rect_raw$",     // D435i 깊이 848x480 (장당 약 0.8 MB)
+          "^/camera/color/image_raw$",          // 컬러 (--rs-sim 에서는 안 나온다)
+          "^/go2/front/image$",                 // Go2 내장 머리 카메라 480x270 (front_cam_pub.py, 2 Hz)
+          "^/rudolph/.*",                       // 수색: map, searched, belief, goal, status
+          "^/hipan/cmd$",                       // 항법 → 하위 보행 명령 [vx vy wz h roll]
+        ],
+        // 노트북 → NX : RViz '2D Goal Pose'(항법 목표), 'Publish Point'(요구조자 발견 위치). 그 밖의 제어는 없다
+        subscribers: [ "^/goal_pose$", "^/clicked_point$" ],
+      },
+      pub_max_frequencies: [
+        "^/map_cloud$=0.2",
+        "^/cloud_registered_body$=2",
+        "^/path$=1",
+        "^/Odometry$=10",
+        "^/camera/depth/image_rect_raw$=2",
+        "^/camera/color/image_raw$=2",
+        "^/go2/front/image$=2",
+        "^/hipan/cmd$=5",
+      ],
+    },
+  },
+  mode: "router",
+  // NX 안에서만 듣는다. 노트북은 SSH 터널로만 (link.sh) — 같은 와이파이의 누구든 /goal_pose 를 보내지 못하게
+  listen: { endpoints: ["tcp/127.0.0.1:7447"] },
+  scouting: { multicast: { enabled: false }, gossip: { enabled: false } },
+}

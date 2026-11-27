@@ -1,0 +1,160 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Help Height: 0
+  - Class: rviz_common/Tool Properties
+    Name: Tool Properties
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 25; 25; 30
+    Fixed Frame: camera_init
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 1
+      Plane Cell Count: 40
+      Color: 80; 80; 90
+    - Class: rviz_default_plugins/PointCloud2
+      Name: 지도 (/map_cloud, 5초마다)
+      Enabled: true
+      Topic:
+        Value: /map_cloud
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        Depth: 1
+      Style: Points
+      Size (Pixels): 2
+      Alpha: 0.8
+      Color Transformer: AxisColor
+      Axis: Z
+      Autocompute Value Bounds: false
+      Min Value: -0.6
+      Max Value: 2.5
+      Decay Time: 0
+    - Class: rviz_default_plugins/PointCloud2
+      Name: 현재 스캔 (2 Hz)
+      Enabled: true
+      Topic:
+        Value: /cloud_registered_body
+        Reliability Policy: Reliable
+        Depth: 5
+      Style: Points
+      Size (Pixels): 3
+      Color Transformer: FlatColor
+      Color: 255; 255; 255
+      Decay Time: 0
+    - Class: rviz_default_plugins/Map
+      Name: 수색 지도 (/rudolph/map)
+      Enabled: true
+      Topic:
+        Value: /rudolph/map
+        Reliability Policy: Reliable
+        Depth: 1
+      Color Scheme: map
+      Alpha: 0.5
+      Draw Behind: true
+    - Class: rviz_default_plugins/Map
+      Name: 요구조자 확률 (/rudolph/belief)
+      Enabled: true
+      Topic:
+        Value: /rudolph/belief
+        Reliability Policy: Reliable
+        Depth: 1
+      Color Scheme: costmap
+      Alpha: 0.6
+      Draw Behind: false
+    - Class: rviz_default_plugins/Map
+      Name: 본 곳 (/rudolph/searched)
+      Enabled: false
+      Topic:
+        Value: /rudolph/searched
+        Reliability Policy: Reliable
+        Depth: 1
+      Color Scheme: map
+      Alpha: 0.3
+      Draw Behind: false
+    - Class: rviz_default_plugins/Pose
+      Name: 수색 목표 (/rudolph/goal)
+      Enabled: true
+      Topic:
+        Value: /rudolph/goal
+        Reliability Policy: Reliable
+        Depth: 1
+      Shape: Arrow
+      Color: 255; 200; 0
+      Shaft Length: 0.6
+      Shaft Radius: 0.06
+      Head Length: 0.25
+      Head Radius: 0.15
+    - Class: rviz_default_plugins/Path
+      Name: 지나온 길
+      Enabled: true
+      Topic:
+        Value: /path
+        Reliability Policy: Reliable
+        Depth: 5
+      Color: 255; 60; 60
+      Line Style: Billboards
+      Line Width: 0.04
+    - Class: rviz_default_plugins/Odometry
+      Name: 로봇 (/Odometry)
+      Enabled: true
+      Topic:
+        Value: /Odometry
+        Reliability Policy: Reliable
+        Depth: 5
+      Keep: 1
+      Shape:
+        Value: Axes
+        Axes Length: 0.5
+        Axes Radius: 0.05
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: false
+      Show Names: false
+      Marker Scale: 0.4
+    - Class: rviz_default_plugins/Image
+      Name: D435i 깊이 (2 Hz)
+      Enabled: true
+      Topic:
+        Value: /camera/depth/image_rect_raw
+        Reliability Policy: Reliable
+        Depth: 1
+      Normalize Range: false
+      Min Value: 0
+      Max Value: 5000
+    - Class: rviz_default_plugins/Image
+      Name: Go2 머리 카메라 (2 Hz)
+      Enabled: true
+      Topic:
+        Value: /go2/front/image
+        Reliability Policy: Reliable
+        Depth: 1
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Measure
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Value: /goal_pose
+    - Class: rviz_default_plugins/PublishPoint
+      Single click: true
+      Topic:
+        Value: /clicked_point
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 18
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 0.9
+      Yaw: 3.6
+      Target Frame: body
+Window Geometry:
+  Width: 1600
+  Height: 950

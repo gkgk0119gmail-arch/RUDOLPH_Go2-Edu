@@ -137,7 +137,7 @@ class Panel(QMainWindow):
 
         chips = QHBoxLayout()
         self.chips = {}
-        for k in ["ssh", "go2", "load", "temp", "wifi"]:
+        for k in ["ssh", "go2", "bridge", "load", "temp", "wifi"]:
             lb = QLabel()
             lb.setStyleSheet("padding:3px 10px; border:1px solid #d0d4da; border-radius:10px")
             chips.addWidget(lb)
@@ -252,6 +252,7 @@ class Panel(QMainWindow):
         h = QHBoxLayout()
         g.addLayout(h, 6, 0, 1, 4)
         for text, fn in [("NX 터미널", self.open_term), ("RViz (노트북)", self.open_rviz),
+                         ("브리지 끄기", lambda: self.cmd(["bridge", "stop"])),
                          ("명령어 다시 읽기", self.load_usage)]:
             b = QPushButton(text)
             b.clicked.connect(fn)
@@ -400,11 +401,15 @@ class Panel(QMainWindow):
             QMessageBox.information(self, "NX 터미널", " ".join(cmd))
 
     def open_rviz(self):
-        cfg = REPO / "rviz" / "slam_lio.rviz"
-        if not shutil.which("rviz2"):
-            QMessageBox.information(self, "RViz", "이 노트북에 rviz2 가 없습니다 (ROS2 source 후 제어판을 다시 여세요).")
+        """tools/zenoh/laptop.sh: NX 브리지 켜기 → 노트북 브리지 + SSH 터널 → rviz2 (닫으면 노트북 쪽만 내림)."""
+        sh = REPO / "tools" / "zenoh" / "laptop.sh"
+        if not shutil.which("rviz2") and not Path("/opt/ros/humble/setup.bash").exists():
+            QMessageBox.information(self, "RViz", "이 노트북에 ROS 2 Humble(rviz2)이 없습니다.")
             return
-        subprocess.Popen(["rviz2", "-d", str(cfg)] if cfg.exists() else ["rviz2"])
+        log = open(os.path.join(os.environ.get("TMPDIR", "/tmp"), "rudolph_rviz.log"), "w")
+        subprocess.Popen([str(sh), HOST], stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+        self.say("RViz 여는 중 — NX 브리지 → SSH 터널 → 노트북 브리지 (로그: /tmp/rudolph_rviz.log)")
+        QTimer.singleShot(4000, self.poll_status)
 
     def load_usage(self):
         self.ssh.run(["usage"], lambda code, out: self.usage.setPlainText(out.replace("@@@ ", "\n━━━━ ")))
@@ -448,6 +453,8 @@ class Panel(QMainWindow):
             self.st = st
             self.set_chip("ssh", GREEN, "SSH ✓")
             self.set_chip("go2", GREEN if st.get("go2") == "1" else RED, "Go2 " + ("✓" if st.get("go2") == "1" else "✗"))
+            self.set_chip("bridge", GREEN if st.get("bridge") == "1" else GREY,
+                          "RViz 브리지 " + ("✓" if st.get("bridge") == "1" else "꺼짐"))
             self.set_chip("load", GREY, "부하 " + st.get("load", "?"))
             t = int(st.get("temp", "0") or 0)
             self.set_chip("temp", ORANGE if t >= 75 else GREY, "온도 %d°C" % t)

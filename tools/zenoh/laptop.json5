@@ -1,0 +1,19 @@
+// ═══════════════════════════════════════════════════════════════════
+//  노트북 쪽 Zenoh 브리지 — SSH 터널로 NX 브리지에 붙어 토픽을 노트북 안(localhost) ROS 로 푼다
+//  link.sh 가 이 파일로 띄운다. 무엇을 보낼지는 NX 쪽(nx.json5)이 정한다.
+// ═══════════════════════════════════════════════════════════════════
+{
+  plugins: {
+    ros2dds: {
+      ros_localhost_only: false,  // ★ true 로 두면 노트북 → NX 메시지가 5배로 중복됐다. 대신 link.sh 가 CYCLONEDDS_URI 로 lo 에만 묶는다
+      allow: {
+        publishers: [ "^/goal_pose$", "^/clicked_point$" ],   // 노트북 → NX
+        subscribers: [ ".*" ],                                 // NX → 노트북 (RViz 가 구독하는 것)
+      },
+    },
+  },
+  mode: "client",
+  // NX 브리지가 아직 없거나 와이파이가 끊겨도 죽지 말고 계속 다시 붙는다
+  connect: { timeout_ms: -1, exit_on_failure: false },
+  scouting: { multicast: { enabled: false }, gossip: { enabled: false } },
+}
