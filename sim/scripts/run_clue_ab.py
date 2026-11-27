@@ -33,6 +33,8 @@ ALL = {"A": dict(beta=0.0), "B": dict(beta=1.0), "A_doc": dict(beta=0.0, score="
        "A_noexit": dict(beta=0.0, early_exit=False), "B_noexit": dict(beta=1.0, early_exit=False),
        "B_kw": dict(beta=1.0, keyword=True),
        "B_tc": dict(beta=1.0, trust_update="clue"), "B_tr": dict(beta=1.0, trust_update="reporter"),
+       "B_d5": dict(beta=1.0, parse_delay=5.0), "B_d20": dict(beta=1.0, parse_delay=20.0),
+       "B_d60": dict(beta=1.0, parse_delay=60.0), "B_d120": dict(beta=1.0, parse_delay=120.0),
        "B90": dict(beta=0.9), "B90_tc": dict(beta=0.9, trust_update="clue"), "B90_tr": dict(beta=0.9, trust_update="reporter"),
        "B75": dict(beta=0.75), "B75_tc": dict(beta=0.75, trust_update="clue"), "B75_tr": dict(beta=0.75, trust_update="reporter"),
        "A_wit": dict(beta=1.0, witness=True, use_clues=True, clues=[]), "B_wit": dict(beta=1.0, witness=True)}
@@ -65,7 +67,7 @@ if __name__ == "__main__":
         rows = p.map(S.run_job, [(s, V, kw) for s in range(lo, hi)])
     summ = {}
     for k in V:
-        summ[k] = {m: round(float(np.mean([r[k][m] for r in rows])), 3) for m in ("t_all", "t_clued", "t_first", "auc", "n_found", "all_found", "path", "coverage", "t_mission", "n_witness")}
+        summ[k] = {m: round(float(np.mean([r[k][m] for r in rows])), 3) for m in ("t_all", "t_clued", "t_first", "auc", "n_found", "all_found", "path", "coverage", "t_mission", "n_witness", "n_turnback")}
     base = list(V)[0]
     for k in list(V)[1:]:
         for m in ("t_all", "t_clued", "auc", "t_first", "t_mission"):

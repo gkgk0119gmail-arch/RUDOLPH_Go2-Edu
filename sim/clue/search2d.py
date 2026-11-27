@@ -159,7 +159,8 @@ _ANG = np.linspace(-np.pi, np.pi, 360, endpoint=False)
 class Search:
     def __init__(self, b: Building, a=1.0, beta=0.0, c=1.0, use_clues=None, seed=0, mobility="static",
                  score="rate", t0=10.0, clues=None, trust=None, kappa=1.0, early_exit=True, witness=False,
-                 keyword=False, vlm=None, trust_update="none", rho=0.7, w_lo=0.1):
+                 keyword=False, vlm=None, trust_update="none", rho=0.7, w_lo=0.1,
+                 parse_delay=0.0):
         """score "rate": expected victims behind f / (travel time + t0), expected victims =
              w * sum of clue masses + (victims not covered by a clue + (1 - w) * active clues) * G(f) / sum G,
              w = clip(beta, 0, 1) = trust in the clues (0 = coverage search A, 1 = full trust)
@@ -176,6 +177,7 @@ class Search:
         self.trust, self.kappa, self.early_exit, self.witness = trust, kappa, early_exit, witness
         self.n_witness = 0
         self.trust_update, self.rho, self.w_lo = trust_update, rho, w_lo
+        self.pending, self.n_turnback, self._last_dir = set(), 0, None   # clues still being parsed (parse_delay)
         self.L_found = {}          # clue k -> likelihood ratio fixed when its person was found
         self.zpost = {}            # clue k -> unsearched fraction of its spreading posterior (D > 0)
         self.keyword = keyword     # SLOOP "keyword" baseline: only the place word (a room), no side / ordinal
@@ -211,6 +213,20 @@ class Search:
                     self.fixed[i] = B.clue_prior(np.zeros((H, W), np.int8), CELL, b.start, b.facing, c, **kw)
                     if self.D > 0:   # spread for the time since the sighting (walls unknown yet: free space)
                         self.post[i] = B.spread(self.fixed[i], np.zeros((H, W), np.int8), CELL, c.get("age_s", 0.0), self.D)
+            if parse_delay > 0:   # the robot keeps searching (coverage) while the VLM parses the start clues
+                self.pending = set(self.active)
+                for i in self.pending:
+                    self.active[i] = False
+                self.parse_done = self.t + parse_delay
+
+    def _parse_ready(self):
+        """Start clues become usable once the parse is done (unless their person was found meanwhile)."""
+        if self.pending and self.t >= self.parse_done:
+            for i in self.pending:
+                self.active[i] = self.found[self.clues[i]["victim"]] is None
+            self.pending = set()
+            return True
+        return False
 
     ROOM_W = 5.0 / CELL           # assumed room width before rooms are seen
 
@@ -506,7 +522,8 @@ class Search:
             if i % 2 == 0:
                 n0 = sum(f is not None for f in self.found)
                 self.sense()
-                if self.known[cells[-1]] == OCC or sum(f is not None for f in self.found) > n0 or i >= 25:
+                if self.known[cells[-1]] == OCC or sum(f is not None for f in self.found) > n0 or i >= 25 \
+                        or self._parse_ready():
                     return                                           # replan: blocked, found someone, or 5 m walked
         self.t += SPIN_S
         self.sense(spin=True)
@@ -516,10 +533,16 @@ class Search:
         for _ in range(600):
             if (self.early_exit and all(f is not None for f in self.found)) or self.t > LIMIT_S:
                 break
+            self._parse_ready()
             d, pred = self.plan()
             tgt = self.choose(d)
             if tgt is None:
                 break
+            v = np.subtract(tgt, self.pos).astype(float)
+            if np.hypot(*v) > 2.0 / CELL:     # count goal flips > 135 deg (turning back) between far goals
+                if self._last_dir is not None and v @ self._last_dir / (np.hypot(*v) * np.hypot(*self._last_dir)) < -0.7:
+                    self.n_turnback += 1
+                self._last_dir = v
             if tgt == self.pos:
                 self.t += SPIN_S
                 self.sense(spin=True)
@@ -538,7 +561,7 @@ class Search:
         t_clued = max(x if x is not None and x <= LIMIT_S else LIMIT_S for x in cv) if cv else 0.0
         return dict(n_found=len(f), all_found=len(f) == n, t_all=max(f) if len(f) == n else LIMIT_S, t_clued=t_clued,
                     t_first=min(f) if f else LIMIT_S, auc=float(np.trapezoid(curve, ts) / LIMIT_S),
-                    path=self.path, coverage=float(cov), t_end=min(self.t, LIMIT_S), t_mission=t_mission, n_witness=wit)
+                    path=self.path, coverage=float(cov), t_end=min(self.t, LIMIT_S), t_mission=t_mission, n_witness=wit, n_turnback=self.n_turnback)
 
 
 def run_job(job):
