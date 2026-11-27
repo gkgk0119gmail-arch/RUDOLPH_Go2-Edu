@@ -25,6 +25,23 @@ Unitree Go2 EDU Plus에 **Hesai PandarXT-16**(3D LiDAR)과 **Intel RealSense D43
 최종 갱신: **2026-11-27**
 - 2026-11-26: 시뮬레이션에서만 학습한 HiPAN 하위 보행 정책을 실제 Go2에 그대로 올려 걷기 성공.
 - 같은 날, depth 항법 student(지도 없이 D435i depth + 목표점)를 실로봇에서 실제 실행: 목표점 2–3 m, 7회 중 4회 도착 (사용자 정지 2회, 첫 지형에서 넘어짐 1회). 머리 위 장애물 앞에서 몸을 숙였다가 지나서 다시 일어남 ([시험 기록](docs/real_test_20261126.md)).
+- 2026-11-27: 연구 전체 개요도와 노드별 설명 그림 추가 (아래).
+
+### 연구 개요
+
+<img src="docs/images/overview/overview.png" width="100%">
+
+<sub>① 제보 해석 → ③ 수색(목표점 선택) → ④ 상위 항법 → ⑤ 하위 보행, ② 지도·사람 탐지가 ③을 갱신. 단계별 움짤: [overview_flow.gif](docs/images/overview/overview_flow.gif)</sub>
+
+| 노드 | 하는 일 | 학습 | 설명 그림 |
+|---|---|---|---|
+| ① 제보 해석 | 사람 말 → 단서 JSON (Qwen3-VL-8B) | 없음 (프롬프트 설계) | [node1](docs/images/overview/node1_parser.png) |
+| ② 지도·사람 탐지 | FAST-LIO2 3D 지도 → 2D 격자, 머리 카메라 사람 검출 | 없음 | [node2](docs/images/overview/node2_perception.png) |
+| ③ 수색: 목표점 | 요구조자 확률 지도 → 다음 목표점 | 신뢰도 값 3개 (차분진화, 2D 시뮬) | [node3](docs/images/overview/node3_search.png) |
+| ④ 상위 항법 | 목표점 + depth → 속도·몸 높이·roll (10 Hz) | teacher PPO (특권 지도) → student DAgger | [node4](docs/images/overview/node4_nav.png) |
+| ⑤ 하위 보행 | 명령 → 관절 12개 (50 Hz C++) | teacher PPO (높이맵) → student 증류 | [node5](docs/images/overview/node5_low.png) |
+
+학습 방식 요약: [training_summary.png](docs/images/overview/training_summary.png) · 그림 생성: `python3 tools/make_overview_figs.py`
 
 ![map preview](docs/images/map_20261122_171243.png)
 <sub>FAST-LIO2로 직접 매핑한 실내 지도 (Hesai XT16 + Go2 IMU, 5 cm voxel, 약 23만 점)</sub>
