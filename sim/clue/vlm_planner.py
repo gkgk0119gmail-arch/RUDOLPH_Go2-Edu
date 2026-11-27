@@ -29,7 +29,16 @@ class VLMPlanner:
 
     def __call__(self, search, tg, G, C) -> int:
         b = search.b
-        order = sorted(range(len(tg)), key=lambda i: C[i])[: self.k]
+        # one candidate per region (a room, or a 4 m corridor stretch): the one with most unsearched area behind it,
+        # so far rooms the clues name are on the table, not twelve cells of the nearest room
+        best = {}
+        for i, (y, x) in enumerate(tg):
+            ri = search.room_of((y, x))
+            key = ("room", ri) if ri is not None else ("corr", int((x - b.corr_x0) * 0.2 // 4))
+            if G[i] > 0 and (key not in best or G[i] > G[best[key]]):
+                best[key] = i
+        cand = list(best.values()) or list(range(len(tg)))
+        order = sorted(cand, key=lambda i: C[i])[: self.k]
         rows = []
         for j, i in enumerate(order):
             y, x = tg[i]
