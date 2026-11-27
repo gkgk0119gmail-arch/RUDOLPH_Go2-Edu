@@ -159,15 +159,25 @@ _ANG = np.linspace(-np.pi, np.pi, 360, endpoint=False)
 class Search:
     def __init__(self, b: Building, a=1.0, beta=0.0, c=1.0, use_clues=None, seed=0, mobility="static",
                  score="rate", t0=10.0, clues=None, trust=None, kappa=1.0, early_exit=True, witness=False,
-                 keyword=False, vlm=None):
+                 keyword=False, vlm=None, trust_update="none", rho=0.7, w_lo=0.1):
         """score "rate": expected victims behind f / (travel time + t0), expected victims =
              w * sum of clue masses + (victims not covered by a clue + (1 - w) * active clues) * G(f) / sum G,
              w = clip(beta, 0, 1) = trust in the clues (0 = coverage search A, 1 = full trust)
            score "doc": a * G/maxG + beta * M/maxM - c * C/maxC (plan doc form).
         clues: what the robot understood (default: the building's gold clues); metrics always use the gold ones.
-        trust: {"high"|"mid"|"low": w} per spoken certainty (default: beta for all); kappa: S = E / (C + t0)^kappa."""
+        trust: {"high"|"mid"|"low": w} per spoken certainty (default: beta for all); kappa: S = E / (C + t0)^kappa.
+        trust_update: how w_k follows the evidence (Bayes on "is clue k right"):
+           "none"     fixed w_k
+           "clue"     each clue alone: w_k <- w L_k / (w L_k + 1 - w), L_k = likelihood ratio right/wrong of what the
+                      robot saw (clue mass still unsearched / open space still unsearched; at a find, clue density
+                      at the person / uniform density)
+           "reporter" clues of one speaker share "is this speaker reliable" (prior rho); reliable -> each clue right
+                      with w_k, unreliable -> with w_lo. One clue proven wrong lowers the speaker's other clues."""
         self.trust, self.kappa, self.early_exit, self.witness = trust, kappa, early_exit, witness
         self.n_witness = 0
+        self.trust_update, self.rho, self.w_lo = trust_update, rho, w_lo
+        self.L_found = {}          # clue k -> likelihood ratio fixed when its person was found
+        self.zpost = {}            # clue k -> unsearched fraction of its spreading posterior (D > 0)
         self.keyword = keyword     # SLOOP "keyword" baseline: only the place word (a room), no side / ordinal
         self.vlm = vlm             # score "vlm": a VLMPlanner picks the goal itself (COMRES-style baseline)
         self.clues = list(b.clues if clues is None else clues)
@@ -223,7 +233,7 @@ class Search:
             if f is None and j != i and self.room_of(self.vpos[j]) in nb and not any(
                     c["victim"] == j and self.active.get(k) for k, c in enumerate(self.clues)):
                 self.clues.append({"utterance": "clue", "semantic": ["room:next"], "ref_room": ri, "count": 1,
-                                   "certainty": "high", "victim": j})
+                                   "certainty": "high", "victim": j, "by": f"found{i}"})
                 self.active[len(self.clues) - 1] = True
                 self.t += TALK_S
                 self.n_witness += 1
@@ -280,8 +290,58 @@ class Search:
         return r_ * p / max(p.sum(), 1e-12) + (1 - r_) * ok / ok.sum()
 
     def weight(self, k):
+        if self.trust_update != "none":
+            return self._weights().get(k, 0.0)
+        return self.base_weight(k)
+
+    def base_weight(self, k):
         w = self.beta if self.trust is None else self.trust.get(self.clues[k].get("certainty") or "high", self.beta)
         return min(max(w, 0.0), 1.0)
+
+    # -- trust from evidence ------------------------------------------------------------------------------------
+    def _density_ratio(self, k, v):
+        """Person of clue k found at cell v: clue density there / uniform density over passable cells."""
+        ok = self.known != OCC
+        p = (self.post[k] if k in self.post else self.prior(k)) * ok
+        return float(p[v] / max(p.sum(), 1e-12) * ok.sum())
+
+    def _lr(self, k):
+        """Likelihood ratio (clue k right / wrong) of what the robot has seen so far."""
+        if k in self.L_found:
+            return self.L_found[k]
+        ok = self.known != OCC
+        u = float((self.nodet * ok).sum() / max(ok.sum(), 1))
+        if k in self.post:
+            z = self.zpost.get(k, 1.0)
+        else:
+            p = self.prior(k) * ok
+            z = float((p * self.nodet).sum() / max(p.sum(), 1e-12))
+        return z / max(u, 1e-9)
+
+    def _weights(self):
+        key = (self.t, len(self.clues))
+        if getattr(self, "_wkey", None) == key:
+            return self._wcache
+        L = {k: self._lr(k) for k in self.active}
+        w = {}
+        if self.trust_update == "clue":
+            for k in self.active:
+                w0 = self.base_weight(k)
+                w[k] = w0 * L[k] / max(w0 * L[k] + 1 - w0, 1e-12)
+        else:
+            groups = {}
+            for k in self.active:
+                groups.setdefault(self.clues[k].get("by", "start"), []).append(k)
+            for g in groups.values():
+                pr = {1: self.rho, 0: 1 - self.rho}
+                wr = {1: {j: self.base_weight(j) for j in g}, 0: {j: min(self.w_lo, self.base_weight(j)) for j in g}}
+                f = {R: {j: wr[R][j] * L[j] + 1 - wr[R][j] for j in g} for R in (0, 1)}
+                joint = {R: pr[R] * float(np.prod([f[R][j] for j in g])) for R in (0, 1)}
+                tot = max(joint[0] + joint[1], 1e-300)
+                for k in g:
+                    w[k] = sum(joint[R] * wr[R][k] * L[k] / max(f[R][k], 1e-300) for R in (0, 1)) / tot
+        self._wkey, self._wcache = key, w
+        return w
 
     def beliefs(self):
         """-> [(trust w_k, normalised belief)] for active clues."""
@@ -340,7 +400,9 @@ class Search:
             if self.found[i] is None and seen[v] and self.rng.random() < P_SEE:
                 self.found[i] = self.t
                 for k in self.active:
-                    if self.clues[k]["victim"] == i:     # oracle match (appearance in reality)
+                    if self.clues[k]["victim"] == i and self.active[k]:   # oracle match (appearance in reality)
+                        if self.trust_update != "none":
+                            self.L_found[k] = self._density_ratio(k, v)
                         self.active[k] = False
                 if self.witness:
                     self._witness(i)
@@ -349,6 +411,7 @@ class Search:
             m = self.post[k] * (self.known != OCC)
             m[seen] *= 1 - P_DETECT_MODEL
             s_ = m.sum()
+            self.zpost[k] = self.zpost.get(k, 1.0) * min(s_ / max(self.post[k].sum(), 1e-12), 1.0)
             self.post[k] = m / s_ if s_ > 1e-12 else m
 
     # -- planning ------------------------------------------------------------------------------------------

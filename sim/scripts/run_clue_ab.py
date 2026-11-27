@@ -32,6 +32,9 @@ ALL = {"A": dict(beta=0.0), "B": dict(beta=1.0), "A_doc": dict(beta=0.0, score="
        "B_mobile": dict(beta=1.0, mobility="unknown"), "B_spread": dict(beta=1.0, mobility="mobile"),
        "A_noexit": dict(beta=0.0, early_exit=False), "B_noexit": dict(beta=1.0, early_exit=False),
        "B_kw": dict(beta=1.0, keyword=True),
+       "B_tc": dict(beta=1.0, trust_update="clue"), "B_tr": dict(beta=1.0, trust_update="reporter"),
+       "B90": dict(beta=0.9), "B90_tc": dict(beta=0.9, trust_update="clue"), "B90_tr": dict(beta=0.9, trust_update="reporter"),
+       "B75": dict(beta=0.75), "B75_tc": dict(beta=0.75, trust_update="clue"), "B75_tr": dict(beta=0.75, trust_update="reporter"),
        "A_wit": dict(beta=1.0, witness=True, use_clues=True, clues=[]), "B_wit": dict(beta=1.0, witness=True)}
 ap2 = None
 V = {k: ALL[k] for k in a.variants.split(",") if k in ALL}
