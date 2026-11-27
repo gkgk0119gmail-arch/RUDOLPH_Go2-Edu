@@ -30,51 +30,89 @@ P_DETECT_MODEL = 0.8
 
 
 class LiveGrid:
-    """Occupancy from registered point clouds, local floor height under the robot.
+    """2D grid (CELL) from registered point clouds.
 
-    occupied: >= min_hits points in [floor + obs_min, floor + obs_max]   (obs_max ~ robot height when standing)
-    free:     floor points (z within floor +- floor_tol) without obstacle hits, plus the robot footprint
-    The floor is the robot base height minus base_h (odometry z is the IMU / body, which the walking policy keeps
-    0.12-0.36 m above the floor; base_h is set to the standing height and the floor estimate is refined from floor
-    points under the robot when they are seen)."""
+    floor:    10th percentile of z among points 0.15-1.2 m below the body within 3 m of the robot (running mean)
+    hits:     points in [floor + obs_min, floor + obs_max] (obs_max ~ standing robot height)
+    misses:   cells crossed by the 2D ray from the sensor to each such point (something was seen through them)
+    occupied: hits >= min_hits and hits >= occ_ratio * misses  (a person walking by is crossed later and fades;
+              walls are hit every scan)
+    free:     crossed by rays (misses >= 2) or floor seen there, and not occupied; the robot footprint is always free
+    """
 
-    def __init__(self, size_m: float = 60.0, center_xy=(0.0, 0.0), obs_min=0.12, obs_max=0.5, floor_tol=0.06,
-                 min_hits=3, base_h=0.32, foot_r=0.35):
+    def __init__(self, size_m: float = 120.0, center_xy=(0.0, 0.0), obs_min=0.12, obs_max=0.5, floor_tol=0.06,
+                 min_hits=3, occ_ratio=0.25, foot_r=0.35, max_rays=3000, ray_range=10.0):
         self.n = int(round(size_m / CELL))
         self.x0 = center_xy[0] - size_m / 2
         self.y1 = center_xy[1] + size_m / 2
         self.hits = np.zeros((self.n, self.n), np.int32)
+        self.miss = np.zeros((self.n, self.n), np.int32)
         self.floor = np.zeros((self.n, self.n), np.int32)
         self.foot = np.zeros((self.n, self.n), bool)
         self.obs_min, self.obs_max, self.floor_tol, self.min_hits = obs_min, obs_max, floor_tol, min_hits
-        self.base_h, self.foot_r = base_h, foot_r
+        self.occ_ratio, self.foot_r, self.max_rays, self.ray_range = occ_ratio, foot_r, max_rays, ray_range
         self.floor_z = None
+        self.rng = np.random.default_rng(0)
 
     def cell(self, x, y):
         c = np.floor((np.asarray(x) - self.x0) / CELL).astype(int)
         r = np.floor((self.y1 - np.asarray(y)) / CELL).astype(int)
         return r, c
 
+    def inside(self, x, y) -> bool:
+        r, c = self.cell(x, y)
+        return bool(0 <= r < self.n and 0 <= c < self.n)
+
     def world(self, r, c):
         return self.x0 + (np.asarray(c) + 0.5) * CELL, self.y1 - (np.asarray(r) + 0.5) * CELL
 
+    def _floor(self, pts, pose):
+        """Floor height under the robot for THIS scan (FAST-LIO z drifts by tens of cm over a run, so one global
+        floor height does not work): 10th percentile of nearby points below the body; when too few are seen, the
+        body height minus the last measured body-to-floor offset."""
+        d = np.hypot(pts[:, 0] - pose[0], pts[:, 1] - pose[1])
+        dz = pose[2] - pts[:, 2]
+        cand = (d < 3.0) & (dz > 0.15) & (dz < 1.2)
+        if cand.sum() > 30:
+            est = float(np.percentile(pts[cand, 2], 10))
+            off = pose[2] - est
+            self.offset = off if getattr(self, "offset", None) is None else 0.8 * self.offset + 0.2 * off
+            self.floor_z = est
+        elif getattr(self, "offset", None) is not None:
+            self.floor_z = pose[2] - self.offset
+        return self.floor_z
+
     def add_scan(self, pts: np.ndarray, pose_xyz):
-        """pts: (N, 3) points in the map frame; pose_xyz: robot body position in the map frame."""
-        fz = pose_xyz[2] - self.base_h if self.floor_z is None else self.floor_z
+        """pts: (N, 3) points in the map frame; pose_xyz: sensor / body position in the map frame."""
+        fz = self._floor(pts, pose_xyz)
+        if fz is None:                              # no floor seen yet: only the footprint
+            self.mark_footprint(pose_xyz[0], pose_xyz[1])
+            return
         rel = pts[:, 2] - fz
-        near = np.hypot(pts[:, 0] - pose_xyz[0], pts[:, 1] - pose_xyz[1]) < 1.5
-        under = near & (np.abs(rel) < 0.15)
-        if under.sum() > 20:                                   # refine the floor from points right around the robot
-            est = float(np.percentile(pts[under, 2], 30))
-            self.floor_z = est if self.floor_z is None else 0.9 * self.floor_z + 0.1 * est
-            fz = self.floor_z
-            rel = pts[:, 2] - fz
         r, c = self.cell(pts[:, 0], pts[:, 1])
         ok = (r >= 0) & (r < self.n) & (c >= 0) & (c < self.n)
         obs = ok & (rel >= self.obs_min) & (rel <= self.obs_max)
         flo = ok & (np.abs(rel) <= self.floor_tol)
         np.add.at(self.hits, (r[obs], c[obs]), 1)
         np.add.at(self.floor, (r[flo], c[flo]), 1)
+        # ray clearing toward obstacle-band points (and points above it: open space below them is visible too)
+        ray = ok & (rel >= self.obs_min)
+        ray &= np.hypot(pts[:, 0] - pose_xyz[0], pts[:, 1] - pose_xyz[1]) < self.ray_range
+        idx = np.flatnonzero(ray)
+        if len(idx) > self.max_rays:
+            idx = self.rng.choice(idx, self.max_rays, replace=False)
+        if len(idx):
+            r0, c0 = self.cell(pose_xyz[0], pose_xyz[1])
+            r1, c1 = r[idx], c[idx]
+            n = np.maximum(np.abs(r1 - r0), np.abs(c1 - c0))
+            steps = int(n.max()) if len(n) else 0
+            if steps > 1:
+                t = np.arange(1, steps)[None, :] / np.maximum(n, 1)[:, None]          # exclude start and end
+                keep = t < 1.0 - 0.5 / np.maximum(n, 1)[:, None]
+                rr = np.rint(r0 + (r1 - r0)[:, None] * t).astype(int)[keep]
+                cc = np.rint(c0 + (c1 - c0)[:, None] * t).astype(int)[keep]
+                inb = (rr >= 0) & (rr < self.n) & (cc >= 0) & (cc < self.n)
+                np.add.at(self.miss, (rr[inb], cc[inb]), 1)
         self.mark_footprint(pose_xyz[0], pose_xyz[1])
 
     def mark_footprint(self, x, y):
@@ -86,10 +124,10 @@ class LiveGrid:
         self.foot[R, C] = True
 
     def known(self) -> np.ndarray:
-        """UNK / FREE / OCC grid. Obstacles win over floor except where the robot itself stood."""
+        """UNK / FREE / OCC grid."""
         k = np.full((self.n, self.n), UNK, np.int8)
-        occ = (self.hits >= self.min_hits) & ~self.foot
-        k[(self.floor > 0) | self.foot] = FREE
+        occ = (self.hits >= self.min_hits) & (self.hits >= self.occ_ratio * self.miss) & ~self.foot
+        k[(self.floor > 0) | (self.miss >= 2) | self.foot] = FREE
         k[occ] = OCC
         return k
 
@@ -154,15 +192,16 @@ class LiveSearch(Search):
         self.nodet[seen] *= 1 - P_DETECT_MODEL
         return seen
 
-    def add_clue(self, parsed: dict, text: str = "", by: str = "reporter0"):
-        """Parsed JSON (clue/schema.py) -> clue anchored at the robot pose now. Returns a short status string."""
+    def add_clue(self, parsed: dict, text: str = "", by: str = "reporter0", anchor=None):
+        """Parsed JSON (clue/schema.py) -> clue anchored at the robot pose now, or at anchor = (cell, heading), the
+        pose when the sentence was heard (parsing takes a second or two while the robot moves). -> status string."""
+        pos, head = anchor if anchor is not None else (self.pos, self.head)
         if not parsed or parsed.get("utterance") != "clue":
             self.log.append((self.t, "not a clue", text))
             return f"not a clue ({(parsed or {}).get('utterance')})"
         n = int(parsed.get("count") or 1)
         c = {k: parsed.get(k) for k in ("direction_deg", "distance_m", "distance_qual", "certainty", "semantic")}
-        c.update({"utterance": "clue", "count": n, "by": by, "text": text, "anchor_rc": self.pos,
-                  "anchor_head": self.head})
+        c.update({"utterance": "clue", "count": n, "by": by, "text": text, "anchor_rc": pos, "anchor_head": head})
         k = len(self.clues)
         self.clues.append(c)
         self.found += [None] * n
@@ -170,7 +209,7 @@ class LiveSearch(Search):
             self.log.append((self.t, "kept, no map yet (semantic only)", text))
             return f"clue {k}: no direction / distance (semantic {c['semantic']}), kept for later"
         kw = {"half_angle": parsed["_half_angle"], "dist_rel": parsed["_dist_rel"]} if "_half_angle" in parsed else {}
-        self.fixed[k] = B.clue_prior(np.zeros(self.known.shape, np.int8), CELL, self.pos, self.head, c, **kw)
+        self.fixed[k] = B.clue_prior(np.zeros(self.known.shape, np.int8), CELL, pos, head, c, **kw)
         self.active[k] = True
         self.log.append((self.t, f"clue {k}", text))
         return f"clue {k}: direction {c['direction_deg']} distance {c['distance_m'] or c['distance_qual']} x{n}"
