@@ -1,0 +1,23 @@
+{
+ "n": 360,
+ "fields": {
+  "utterance": 1.0,
+  "mobility": 0.867,
+  "anchor": 0.539,
+  "direction_deg": 0.508,
+  "distance_m": 0.925,
+  "distance_qual": 1.0,
+  "floor": 1.0,
+  "floor_rel": 1.0,
+  "semantic": 0.639,
+  "count": 0.861,
+  "count_qual": 1.0,
+  "appearance": 1.0,
+  "certainty": 0.606,
+  "all": 0.097
+ },
+ "same_place": {
+  "semantic": 0.889,
+  "spoken": 0.972
+ }
+}
